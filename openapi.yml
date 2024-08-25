@@ -15,7 +15,9 @@ info:
     email: ignatovegors@gmail.com
     name: ysignat
 
-servers: [] # TODO:
+servers:
+  - url: http://localhost:8080
+    description: Local development
 
 components:
   schemas:
@@ -74,16 +76,9 @@ components:
           $ref: "#/components/schemas/ItemLocation"
 
     ItemsArray:
-      type: object
-      properties:
-        results:
-          type: array
-          items:
-            $ref: "#/components/schemas/Item"
-        page:
-          $ref: "#/components/schemas/Page"
-        limit:
-          $ref: "#/components/schemas/Limit"
+      type: array
+      items:
+        $ref: "#/components/schemas/Item"
 
 paths:
   /items:
@@ -106,6 +101,13 @@ paths:
             "application/json":
               schema:
                 $ref: "#/components/schemas/ItemsArray"
+          headers:
+            Pagination-Page:
+              schema:
+                $ref: "#/components/schemas/Page"
+            Pagination-Limit:
+              schema:
+                $ref: "#/components/schemas/Limit"
     post:
       requestBody:
         content:
