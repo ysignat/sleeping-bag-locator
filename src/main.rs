@@ -36,7 +36,7 @@ struct ListQueryParams {
 
 #[tokio::main]
 async fn main() {
-    let listener = TcpListener::bind("localhost:8080").await.unwrap();
+    let listener = TcpListener::bind("0.0.0.0:8080").await.unwrap();
     let router = Router::new()
         .route("/items", get(list_items).post(create_item))
         .route(
