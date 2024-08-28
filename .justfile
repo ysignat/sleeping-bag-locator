@@ -32,4 +32,8 @@ stop:
   #!/usr/bin/env sh
   set -eu
 
-  docker kill "${CONTAINER_NAME}"
+  docker kill "${CONTAINER_NAME}" || true
+
+restart:
+  just stop
+  just start
