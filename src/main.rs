@@ -17,19 +17,67 @@ use uuid::Uuid;
 
 mod errors;
 
+const BIND_ADDRESS: &str = "0.0.0.0:8080";
+const PAGINATION_LIMIT_HEADER: &str = "Pagination-Limit";
+const DEFAULT_PAGINATION_LIMIT: u32 = 10;
+const PAGINATION_PAGE_HEADER: &str = "Pagination-Page";
+const DEFAULT_PAGINATION_PAGE: u32 = 1;
+const MAX_ITEM_NAME_LENGTH: usize = 128;
+const MAX_ITEM_LOCATION_LENGTH: usize = 128;
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(try_from = "String")]
+struct ItemName(String);
+
+impl TryFrom<String> for ItemName {
+    type Error = String;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value.is_empty() {
+            Err("Empty string cannot be name of the item".to_owned())
+        } else if value.len().gt(&MAX_ITEM_NAME_LENGTH) {
+            Err(format!(
+                "Item name cannot be longer than {MAX_ITEM_NAME_LENGTH}"
+            ))
+        } else {
+            Ok(ItemName(value))
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(try_from = "String")]
+struct ItemLocation(String);
+
+impl TryFrom<String> for ItemLocation {
+    type Error = String;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value.is_empty() {
+            Err("Empty string cannot be location of the item".to_owned())
+        } else if value.len().gt(&MAX_ITEM_LOCATION_LENGTH) {
+            Err(format!(
+                "Item location cannot be longer than {MAX_ITEM_LOCATION_LENGTH}"
+            ))
+        } else {
+            Ok(ItemLocation(value))
+        }
+    }
+}
+
 #[derive(Debug, Serialize)]
 struct Item {
     id: Uuid,
-    name: String,
-    location: String,
+    name: ItemName,
+    location: ItemLocation,
     created_at: NaiveDateTime,
     updated_at: NaiveDateTime,
 }
 
 #[derive(Debug, Deserialize)]
 struct UpdateItemBody {
-    name: String,
-    location: String,
+    name: ItemName,
+    location: ItemLocation,
 }
 
 #[derive(Debug, Deserialize)]
@@ -37,12 +85,6 @@ struct ListQueryParams {
     page: Option<u32>,
     limit: Option<u32>,
 }
-
-const BIND_ADDRESS: &str = "0.0.0.0:8080";
-const PAGINATION_LIMIT_HEADER: &str = "Pagination-Limit";
-const DEFAULT_PAGINATION_LIMIT: u32 = 10;
-const PAGINATION_PAGE_HEADER: &str = "Pagination-Page";
-const DEFAULT_PAGINATION_PAGE: u32 = 1;
 
 #[tokio::main]
 async fn main() {
@@ -96,8 +138,8 @@ async fn list_items(
         headers,
         Json(vec![Item {
             id: Uuid::new_v4(),
-            name: "Sleeping Bag".to_owned(),
-            location: "Calgary, AB".to_owned(),
+            name: ItemName("Sleeping Bag".to_owned()),
+            location: ItemLocation("Calgary, AB".to_owned()),
             created_at: Utc::now().naive_utc(),
             updated_at: Utc::now().naive_utc(),
         }]),
@@ -122,8 +164,8 @@ async fn get_item(Query(id): Query<Uuid>) -> impl IntoResponse {
         StatusCode::OK,
         Json(Item {
             id,
-            name: "Sleeping Bag".to_owned(),
-            location: "Calgary, AB".to_owned(),
+            name: ItemName("Sleeping Bag".to_owned()),
+            location: ItemLocation("Calgary, AB".to_owned()),
             created_at: Utc::now().naive_utc(),
             updated_at: Utc::now().naive_utc(),
         }),

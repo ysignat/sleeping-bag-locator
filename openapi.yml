@@ -47,11 +47,13 @@ components:
       type: string
       example: Sleeping Bag
       maxLength: 128
+      minLength: 1
 
     ItemLocation:
       type: string
       example: Calgary, AB
       maxLength: 128
+      minLength: 1
 
     Item:
       type: object
