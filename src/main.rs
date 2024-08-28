@@ -1,9 +1,9 @@
 #![forbid(unsafe_code)]
 #![warn(clippy::pedantic)]
-use anyhow::{anyhow, Context};
+use anyhow::Context;
 use axum::{
     extract::Query,
-    http::{HeaderMap, HeaderValue, StatusCode},
+    http::{header::InvalidHeaderValue, HeaderMap, HeaderValue, StatusCode},
     response::IntoResponse,
     routing::get,
     Json,
@@ -81,9 +81,67 @@ struct UpdateItemBody {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(try_from = "Option<u32>")]
+struct Page(u32);
+
+impl TryFrom<Option<u32>> for Page {
+    type Error = String;
+
+    fn try_from(value: Option<u32>) -> Result<Self, Self::Error> {
+        match value {
+            Some(page) => {
+                if page.eq(&0) {
+                    Err("Page cannot be equal zero".to_owned())
+                } else {
+                    Ok(Page(page))
+                }
+            }
+            None => Ok(Page(DEFAULT_PAGINATION_PAGE)),
+        }
+    }
+}
+
+impl TryInto<HeaderValue> for Page {
+    type Error = InvalidHeaderValue;
+
+    fn try_into(self) -> Result<HeaderValue, Self::Error> {
+        HeaderValue::from_str(&self.0.to_string())
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(try_from = "Option<u32>")]
+struct Limit(u32);
+
+impl TryFrom<Option<u32>> for Limit {
+    type Error = String;
+
+    fn try_from(value: Option<u32>) -> Result<Self, Self::Error> {
+        match value {
+            Some(limit) => {
+                if limit.eq(&0) {
+                    Err("Limit cannot be equal zero".to_owned())
+                } else {
+                    Ok(Limit(limit))
+                }
+            }
+            None => Ok(Limit(DEFAULT_PAGINATION_LIMIT)),
+        }
+    }
+}
+
+impl TryInto<HeaderValue> for Limit {
+    type Error = InvalidHeaderValue;
+
+    fn try_into(self) -> Result<HeaderValue, Self::Error> {
+        HeaderValue::from_str(&self.0.to_string())
+    }
+}
+
+#[derive(Debug, Deserialize)]
 struct ListQueryParams {
-    page: Option<u32>,
-    limit: Option<u32>,
+    page: Page,
+    limit: Limit,
 }
 
 #[tokio::main]
@@ -106,32 +164,9 @@ async fn main() {
 async fn list_items(
     Query(list_params): Query<ListQueryParams>,
 ) -> Result<impl IntoResponse, AppError> {
-    let header_value_error =
-        |k: &str, v: &str| format!("Cannot create valid value for header '{k}' from '{v}'");
-
     let mut headers = HeaderMap::new();
-
-    let page = list_params.page.unwrap_or(DEFAULT_PAGINATION_PAGE);
-    if page.eq(&0) {
-        Err(anyhow!("Page cannot be equal zero"))?;
-    }
-    let page_string = &page.to_string();
-    headers.insert(
-        PAGINATION_PAGE_HEADER,
-        HeaderValue::from_str(page_string)
-            .context(header_value_error(PAGINATION_PAGE_HEADER, page_string))?,
-    );
-
-    let limit = list_params.limit.unwrap_or(DEFAULT_PAGINATION_LIMIT);
-    if limit.eq(&0) {
-        Err(anyhow!("Limit cannot be equal zero"))?;
-    }
-    let limit_string = &limit.to_string();
-    headers.insert(
-        PAGINATION_LIMIT_HEADER,
-        HeaderValue::from_str(limit_string)
-            .context(header_value_error(PAGINATION_LIMIT_HEADER, limit_string))?,
-    );
+    headers.insert(PAGINATION_PAGE_HEADER, list_params.page.try_into()?);
+    headers.insert(PAGINATION_LIMIT_HEADER, list_params.limit.try_into()?);
 
     Ok((
         StatusCode::OK,
