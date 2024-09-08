@@ -8,4 +8,4 @@ repos:
           - --strict
           - --force-scope
           - --scopes
-          - openapi,local,api
+          - openapi,local,api,ci

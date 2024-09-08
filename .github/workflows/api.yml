@@ -1,0 +1,90 @@
+name: Common CI for Sleeping Bag Locator API
+run-name: ${{ github.actor }} is testing out GitHub Actions
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+env:
+  BUILD_ROOT: dist
+  ARTIFACT_NAME: api
+jobs:
+  build:
+    permissions:
+      contents: read
+    runs-on: ubuntu-22.04
+    env:
+      TOOLCHAIN: 1.80.1-x86_64-unknown-linux-gnu
+      TARGET: x86_64-unknown-linux-musl    
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install musl-tools
+        env:
+          DEBIAN_FRONTEND: non-interactive
+          MUSL_TOOLS_VERSION: 1.2.2-4
+        run:
+          sudo apt-get install musl-tools=${{ env.MUSL_TOOLS_VERSION }}
+      - name: Remove installed toolchains
+        run:
+          rustup toolchain uninstall $(rustup toolchain list)
+      - name: Install toolchain
+        run:
+          rustup toolchain install ${{ env.TOOLCHAIN }}
+      - name: Add musl target
+        run: >-
+          rustup target add
+          --toolchain ${{ env.TOOLCHAIN }}
+          ${{ env.TARGET }}
+      - name: Build artifact
+        run: >-
+          cargo
+          +${{ env.TOOLCHAIN }}
+          install
+          --profile release
+          --target ${{ env.TARGET }}
+          --root ${{ env.BUILD_ROOT }}
+          --bin ${{ env.ARTIFACT_NAME }}
+          --path .
+          --locked
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.BUILD_ROOT }}
+  publish-image:
+    runs-on: ubuntu-22.04
+    needs:
+      - build
+    env:
+      REGISTRY: ghcr.io
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.BUILD_ROOT }}
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and Push Image
+        uses: docker/build-push-action@v6
+        env:
+          IMAGE_TAG: ${{ env.REGISTRY }}/${{ github.repository }}:beta-${{ github.run_id }}
+          SRC_BINARY_PATH: bin/${{ env.ARTIFACT_NAME }}
+        with:
+          push: true
+          file: ${{ github.workspace }}/Dockerfile
+          tags: |-
+            ${{ env.IMAGE_TAG }}
+          build-args: |-
+            SRC_BINARY_PATH=${{ env.SRC_BINARY_PATH }}
+          context: ${{ env.BUILD_ROOT }}
