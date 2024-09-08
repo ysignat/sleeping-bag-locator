@@ -1,0 +1,8 @@
+ARG ALPINE_VERSION="3.20"
+
+FROM alpine:${ALPINE_VERSION}
+
+ARG SRC_BINARY_PATH
+
+COPY "${SRC_BINARY_PATH}" /bin/
+RUN chmod +x /bin/*
