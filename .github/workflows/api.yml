@@ -80,6 +80,7 @@ jobs:
         env:
           IMAGE_TAG: ${{ env.REGISTRY }}/${{ github.repository }}:beta-${{ github.run_id }}
           SRC_BINARY_PATH: bin/${{ env.ARTIFACT_NAME }}
+          ALPINE_VERSION: "3.20"
         with:
           push: true
           file: ${{ github.workspace }}/Dockerfile
@@ -87,4 +88,5 @@ jobs:
             ${{ env.IMAGE_TAG }}
           build-args: |-
             SRC_BINARY_PATH=${{ env.SRC_BINARY_PATH }}
+            ALPINE_VERSION=${{ env.ALPINE_VERSION }}
           context: ${{ env.BUILD_ROOT }}
