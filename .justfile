@@ -2,6 +2,7 @@ set export := true
 set dotenv-load := true
 
 CONTAINER_NAME := 'api'
+ALPINE_VERSION := '3.20'
 
 default:
   @just --list
@@ -17,6 +18,7 @@ start:
       --quiet \
       --file dev.dockerfile \
       --build-arg "RUST_VERSION=${RUST_VERSION}" \
+      --build-arg "ALPINE_VERSION=${ALPINE_VERSION}" \
       .
   )"
   docker run \
