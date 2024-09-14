@@ -9,9 +9,9 @@ name = "api"
 path = "src/main.rs"
 
 [dependencies]
-anyhow = "1.0.86"
+anyhow = "1.0.88"
 axum = "0.7.4"
 chrono = { version = "0.4.34", features = ["serde"] }
-serde = { version = "1.0.197", features = ["derive"] }
-tokio = { version = "1.36.0", features = ["macros", "rt-multi-thread"] }
+serde = { version = "1.0.210", features = ["derive"] }
+tokio = { version = "1.40.0", features = ["macros", "rt-multi-thread"] }
 uuid = { version = "1.7.0", features = ["v4", "serde"] }
