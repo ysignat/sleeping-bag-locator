@@ -3,9 +3,17 @@ repos:
     rev: v3.4.0
     hooks:
       - id: conventional-pre-commit
-        stages: [commit-msg]
+        stages:
+          - commit-msg
         args:
           - --strict
           - --force-scope
           - --scopes
           - openapi,local,api,ci
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: no-commit-to-branch
+        args:
+          - --pattern
+          - '^(?!((feature|hotfix)\/[a-zA-Z0-9\-]+)$).*'
