@@ -96,3 +96,20 @@ resource "github_actions_variable" "registry_id" {
   variable_name = "YANDEX_CLOUD_REGISTRY_ID"
   value         = yandex_container_registry.default.id
 }
+
+resource "yandex_iam_service_account" "deploy" {
+  name        = "deploy"
+  description = "Service account for deployment"
+}
+
+resource "yandex_container_registry_iam_binding" "puller" {
+  registry_id = yandex_container_registry.default.id
+  role        = "container-registry.images.puller"
+  members = [
+    "serviceAccount:${yandex_iam_service_account.deploy.id}",
+  ]
+}
+
+output "deploy_service_acount_id" {
+  value = yandex_iam_service_account.deploy.id
+}
