@@ -44,13 +44,14 @@ resource "yandex_container_registry_iam_binding" "pusher" {
   ]
 }
 
-resource "yandex_iam_service_account_api_key" "container_registry_api_key" {
+resource "yandex_iam_service_account_key" "container_registry_key" {
   service_account_id = yandex_iam_service_account.container_registry.id
-  description        = "Api key for shipping docker images from CI"
+  description        = "Key for shipping docker images from CI"
 }
 
-output "token" {
-  value = nonsensitive(yandex_iam_service_account_api_key.container_registry_api_key.secret_key)
+output "key" {
+  value     = yandex_iam_service_account_key.container_registry_key
+  sensitive = true
 }
 
 output "registry" {
