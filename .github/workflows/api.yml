@@ -63,7 +63,6 @@ jobs:
     env:
       GITHUB_REGISTRY: ghcr.io
       YANDEX_CLOUD_REGISTRY: cr.yandex
-      YANDEX_CLOUD_REGISTRY_ID: crpqjebug5o43oc5pfh2
     permissions:
       contents: read
       packages: write
@@ -97,7 +96,7 @@ jobs:
           file: ${{ github.workspace }}/Dockerfile
           tags: |-
             ${{ env.GITHUB_REGISTRY }}/${{ github.repository }}/${{ env.IMAGE_TAG }}
-            ${{ env.YANDEX_CLOUD_REGISTRY }}/${{ env.YANDEX_CLOUD_REGISTRY_ID }}/${{ env.IMAGE_TAG }}
+            ${{ env.YANDEX_CLOUD_REGISTRY }}/${{ vars.YANDEX_CLOUD_REGISTRY_ID }}/${{ env.IMAGE_TAG }}
           build-args: |-
             SRC_BINARY_PATH=${{ env.SRC_BINARY_PATH }}
             ALPINE_VERSION=${{ env.ALPINE_VERSION }}
