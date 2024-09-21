@@ -4,6 +4,10 @@ terraform {
       source  = "yandex-cloud/yandex"
       version = "~> 0.129"
     }
+    github = {
+      source  = "integrations/github"
+      version = "~> 6.3"
+    }
   }
   required_version = "~> 1.9.5"
 
@@ -20,6 +24,10 @@ terraform {
     skip_requesting_account_id  = true
     skip_s3_checksum            = true
   }
+}
+
+locals {
+  repository = "sleeping-bag-locator"
 }
 
 provider "yandex" {
@@ -49,11 +57,23 @@ resource "yandex_iam_service_account_key" "container_registry_key" {
   description        = "Key for shipping docker images from CI"
 }
 
-output "key" {
-  value     = yandex_iam_service_account_key.container_registry_key
-  sensitive = true
+resource "github_actions_secret" "registry_key" {
+  repository  = local.repository
+  secret_name = "YANDEX_CLOUD_REGISTRY_KEY"
+  plaintext_value = jsonencode(
+    {
+      id                 = yandex_iam_service_account_key.container_registry_key.id
+      service_account_id = yandex_iam_service_account_key.container_registry_key.service_account_id
+      created_at         = yandex_iam_service_account_key.container_registry_key.created_at
+      key_algorithm      = yandex_iam_service_account_key.container_registry_key.key_algorithm
+      public_key         = yandex_iam_service_account_key.container_registry_key.public_key
+      private_key        = yandex_iam_service_account_key.container_registry_key.private_key
+    }
+  )
 }
 
-output "registry" {
-  value = yandex_container_registry.default.id
+resource "github_actions_variable" "registry_id" {
+  repository    = local.repository
+  variable_name = "YANDEX_CLOUD_REGISTRY_ID"
+  value         = yandex_container_registry.default.id
 }
