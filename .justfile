@@ -45,5 +45,5 @@ _yc-iam:
   yc config profile activate "${YC_PROFILE_NAME}" > /dev/null
   yc iam create-token
 
-tf *args:
-  YC_TOKEN=$(just _yc-iam) terraform -chdir=infra {{ args }}
+tf target *args:
+  YC_TOKEN=$(just _yc-iam) terraform -chdir={{ target }} {{ args }}

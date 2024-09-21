@@ -9,7 +9,7 @@ repos:
           - --strict
           - --force-scope
           - --scopes
-          - openapi,local,api,ci,infra
+          - openapi,local,api,build,infra,deploy
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
     hooks:

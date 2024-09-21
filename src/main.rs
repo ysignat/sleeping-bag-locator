@@ -1,5 +1,7 @@
 #![forbid(unsafe_code)]
 #![warn(clippy::pedantic)]
+use std::env::var;
+
 use anyhow::Context;
 use axum::{
     extract::Query,
@@ -17,7 +19,7 @@ use uuid::Uuid;
 
 mod errors;
 
-const BIND_ADDRESS: &str = "0.0.0.0:8080";
+const BIND_ADDRESS: &str = "0.0.0.0";
 const PAGINATION_LIMIT_HEADER: &str = "Pagination-Limit";
 const DEFAULT_PAGINATION_LIMIT: u32 = 10;
 const PAGINATION_PAGE_HEADER: &str = "Pagination-Page";
@@ -146,9 +148,11 @@ struct ListQueryParams {
 
 #[tokio::main]
 async fn main() {
-    let listener = TcpListener::bind(BIND_ADDRESS)
+    let port = var("PORT").unwrap_or(8080.to_string());
+    let bind_address = format!("{BIND_ADDRESS}:{port}");
+    let listener = TcpListener::bind(&bind_address)
         .await
-        .context(format!("Cannot bind to {BIND_ADDRESS}"))
+        .context(format!("Cannot bind to {bind_address}"))
         .unwrap();
 
     let router = Router::new()
