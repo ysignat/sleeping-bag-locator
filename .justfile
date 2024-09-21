@@ -3,6 +3,7 @@ set dotenv-load := true
 
 CONTAINER_NAME := 'api'
 ALPINE_VERSION := '3.20'
+YC_PROFILE_NAME := 'sleeping-bag-locator-terraform'
 
 default:
   @just --list
@@ -39,3 +40,10 @@ stop:
 restart:
   just stop
   just start
+
+_yc-iam:
+  yc config profile activate "${YC_PROFILE_NAME}" > /dev/null
+  yc iam create-token
+
+tf *args:
+  YC_TOKEN=$(just _yc-iam) terraform -chdir=infra {{ args }}
