@@ -8,6 +8,7 @@ on:
       - src/**
       - Cargo.*
       - Dockerfile
+      - .github/**
 env:
   BUILD_ROOT: dist
   ARTIFACT_NAME: api
