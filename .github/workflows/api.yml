@@ -53,12 +53,15 @@ jobs:
         with:
           name: ${{ env.ARTIFACT_NAME }}
           path: ${{ env.BUILD_ROOT }}
+
   publish-image:
     runs-on: ubuntu-22.04
     needs:
       - build
     env:
-      REGISTRY: ghcr.io
+      GITHUB_REGISTRY: ghcr.io
+      YANDEX_CLOUD_REGISTRY: cr.yandex
+      YANDEX_CLOUD_REGISTRY_ID: crpqjebug5o43oc5pfh2
     permissions:
       contents: read
       packages: write
@@ -69,23 +72,30 @@ jobs:
         with:
           name: ${{ env.ARTIFACT_NAME }}
           path: ${{ env.BUILD_ROOT }}
-      - name: Log in to the Container registry
+      - name: Log in to the GitHub container registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ${{ env.GITHUB_REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and Push Image
+      - name: Log in to the Yandex Cloud container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.YANDEX_CLOUD_REGISTRY }}
+          username: oauth
+          password: ${{ secrets.YANDEX_CLOUD_REGISTRY_TOKEN }}
+      - name: Build and push image
         uses: docker/build-push-action@v6
         env:
-          IMAGE_TAG: ${{ env.REGISTRY }}/${{ github.repository }}:beta-${{ github.run_id }}
+          IMAGE_TAG: ${{ github.repository }}:beta-${{ github.run_id }}
           SRC_BINARY_PATH: bin/${{ env.ARTIFACT_NAME }}
           ALPINE_VERSION: "3.20"
         with:
           push: true
           file: ${{ github.workspace }}/Dockerfile
           tags: |-
-            ${{ env.IMAGE_TAG }}
+            ${{ env.GITHUB_REGISTRY }}/${{ env.IMAGE_TAG }}
+            ${{ env.YANDEX_CLOUD_REGISTRY }}/${{ env.IMAGE_TAG }}
           build-args: |-
             SRC_BINARY_PATH=${{ env.SRC_BINARY_PATH }}
             ALPINE_VERSION=${{ env.ALPINE_VERSION }}

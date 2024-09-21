@@ -5,7 +5,7 @@ terraform {
       version = "~> 0.129"
     }
   }
-  required_version = "1.9.5"
+  required_version = "~> 1.9.5"
 
   backend "s3" {
     endpoints = {
@@ -29,4 +29,30 @@ provider "yandex" {
 
 resource "yandex_container_registry" "default" {
   name = "default"
+}
+
+resource "yandex_iam_service_account" "container_registry" {
+  name        = "container-registry"
+  description = "Service account for shipping docker images from CI"
+}
+
+resource "yandex_container_registry_iam_binding" "pusher" {
+  registry_id = yandex_container_registry.default.id
+  role        = "container-registry.images.pusher"
+  members = [
+    "serviceAccount:${yandex_iam_service_account.container_registry.id}",
+  ]
+}
+
+resource "yandex_iam_service_account_api_key" "container_registry_api_key" {
+  service_account_id = yandex_iam_service_account.container_registry.id
+  description        = "Api key for shipping docker images from CI"
+}
+
+output "token" {
+  value = nonsensitive(yandex_iam_service_account_api_key.container_registry_api_key.secret_key)
+}
+
+output "registry" {
+  value = yandex_container_registry.default.id
 }
