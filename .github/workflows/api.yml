@@ -8,7 +8,7 @@ on:
       - src/**
       - Cargo.*
       - Dockerfile
-      - .github/**
+      - .github/workflows/api.yml
 env:
   BUILD_ROOT: dist
   ARTIFACT_NAME: api
