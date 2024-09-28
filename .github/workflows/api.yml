@@ -28,9 +28,6 @@ jobs:
           MUSL_TOOLS_VERSION: 1.2.2-4
         run:
           sudo apt-get install musl-tools=${{ env.MUSL_TOOLS_VERSION }}
-      - name: Remove installed toolchains
-        run:
-          rustup toolchain uninstall $(rustup toolchain list)
       - name: Install toolchain
         run:
           rustup toolchain install ${{ env.TOOLCHAIN }}
