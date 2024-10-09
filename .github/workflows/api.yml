@@ -1,5 +1,4 @@
-name: Common CI for Sleeping Bag Locator API
-run-name: ${{ github.actor }} is testing out GitHub Actions
+name: Pull request API checks and deployment
 on:
   pull_request:
     branches:
@@ -98,3 +97,14 @@ jobs:
             SRC_BINARY_PATH=${{ env.SRC_BINARY_PATH }}
             ALPINE_VERSION=${{ env.ALPINE_VERSION }}
           context: ${{ env.BUILD_ROOT }}
+
+  deploy:
+    runs-on: ubuntu-22.04
+    needs:
+      - publish-image
+    env:
+      YANDEX_CLOUD_REGISTRY: cr.yandex
+    permissions:
+      contents: read
+    steps: []
+      
