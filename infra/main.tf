@@ -110,6 +110,8 @@ resource "yandex_container_registry_iam_binding" "puller" {
   ]
 }
 
-output "deploy_service_acount_id" {
-  value = yandex_iam_service_account.deploy.id
+resource "github_actions_variable" "deploy_service_acount_id" {
+  repository    = local.repository
+  variable_name = "YANDEX_CLOUD_DEPLOY_SERVICE_ACCOUNT_ID"
+  value         = yandex_iam_service_account.deploy.id
 }
