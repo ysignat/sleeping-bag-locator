@@ -26,7 +26,7 @@ jobs:
         uses: yc-actions/yc-iam-token@v1
         with:
           yc-sa-json-credentials: ${{ secrets.YANDEX_CLOUD_TERRAFORM_INFRA_KEY }}
-      - uses: ysignat/terraform
+      - uses: ./.github/actions/terraform
         with:
           command: plan
           args: >-
@@ -51,7 +51,7 @@ jobs:
         uses: yc-actions/yc-iam-token@v1
         with:
           yc-sa-json-credentials: ${{ secrets.YANDEX_CLOUD_TERRAFORM_INFRA_KEY }}
-      - uses: ysignat/terraform
+      - uses: ./.github/actions/terraform
         with:
           command: apply
           args: >-
