@@ -76,6 +76,8 @@ jobs:
       contents: read
     needs: 
       - plan
+      - fmt
+      - validate
     if: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
     runs-on: ubuntu-22.04
     environment: infra-review
