@@ -1,5 +1,4 @@
-name: Common CI for Sleeping Bag Locator API
-run-name: ${{ github.actor }} is testing out GitHub Actions
+name: Pull request API checks and deployment
 on:
   pull_request:
     branches:
@@ -9,9 +8,18 @@ on:
       - Cargo.*
       - Dockerfile
       - .github/workflows/api.yml
+      - deploy/**
 env:
+  YANDEX_CLOUD_REGISTRY: cr.yandex
   BUILD_ROOT: dist
-  ARTIFACT_NAME: api
+  TERRAFORM_VERSION: ~> 1.9.5
+  AWS_ACCESS_KEY: ${{ secrets.YANDEX_CLOUD_TERRAFORM_S3_ACCESS_KEY }}
+  AWS_SECRET_KEY: ${{ secrets.YANDEX_CLOUD_TERRAFORM_S3_SECRET_KEY }}
+  GITHUB_TOKEN: ${{ secrets.GH_TERRAFORM_TOKEN }}
+  SPECS_PATH: deploy/
+  GITHUB_REGISTRY_TAG: ${{ vars._GITHUB_REGISTRY }}/${{ github.repository }}/${{ vars.API_ARTIFACT_NAME }}:beta-${{ github.run_id }}
+  YANDEX_CLOUD_REGISTRY_TAG: 
+    ${{ vars.YANDEX_CLOUD_REGISTRY }}/${{ vars.YANDEX_CLOUD_REGISTRY_ID }}/${{ vars.API_ARTIFACT_NAME }}:beta-${{ github.run_id }}
 jobs:
   build:
     permissions:
@@ -44,22 +52,19 @@ jobs:
           --profile release
           --target ${{ env.TARGET }}
           --root ${{ env.BUILD_ROOT }}
-          --bin ${{ env.ARTIFACT_NAME }}
+          --bin ${{ vars.API_ARTIFACT_NAME }}
           --path .
           --locked
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.ARTIFACT_NAME }}
+          name: ${{ vars.API_ARTIFACT_NAME }}
           path: ${{ env.BUILD_ROOT }}
 
   publish-image:
     runs-on: ubuntu-22.04
     needs:
       - build
-    env:
-      GITHUB_REGISTRY: ghcr.io
-      YANDEX_CLOUD_REGISTRY: cr.yandex
     permissions:
       contents: read
       packages: write
@@ -68,12 +73,12 @@ jobs:
       - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
-          name: ${{ env.ARTIFACT_NAME }}
+          name: ${{ vars.API_ARTIFACT_NAME }}
           path: ${{ env.BUILD_ROOT }}
       - name: Log in to the GitHub container registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.GITHUB_REGISTRY }}
+          registry: ${{ vars._GITHUB_REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Log in to the Yandex Cloud container registry
@@ -85,16 +90,69 @@ jobs:
       - name: Build and push image
         uses: docker/build-push-action@v6
         env:
-          IMAGE_TAG: ${{ env.ARTIFACT_NAME }}:beta-${{ github.run_id }}
-          SRC_BINARY_PATH: bin/${{ env.ARTIFACT_NAME }}
+          SRC_BINARY_PATH: bin/${{ vars.API_ARTIFACT_NAME }}
           ALPINE_VERSION: "3.20"
         with:
           push: true
           file: ${{ github.workspace }}/Dockerfile
           tags: |-
-            ${{ env.GITHUB_REGISTRY }}/${{ github.repository }}/${{ env.IMAGE_TAG }}
-            ${{ env.YANDEX_CLOUD_REGISTRY }}/${{ vars.YANDEX_CLOUD_REGISTRY_ID }}/${{ env.IMAGE_TAG }}
+            ${{ env.GITHUB_REGISTRY_TAG }}
+            ${{ env.YANDEX_CLOUD_REGISTRY_TAG }}
           build-args: |-
             SRC_BINARY_PATH=${{ env.SRC_BINARY_PATH }}
             ALPINE_VERSION=${{ env.ALPINE_VERSION }}
           context: ${{ env.BUILD_ROOT }}
+  plan:
+    permissions:
+      contents: read
+    runs-on: ubuntu-22.04
+    needs:
+      - publish-image
+    steps:
+      - uses: actions/checkout@v4
+      - name: Issue IAM Token
+        id: issue-iam-token
+        uses: yc-actions/yc-iam-token@v1
+        with:
+          yc-sa-json-credentials: ${{ secrets.YANDEX_CLOUD_TERRAFORM_INFRA_KEY }}
+      - uses: ./.github/actions/terraform/
+        env:
+          YC_TOKEN: ${{ steps.issue-iam-token.outputs.token }}
+          TF_VAR_image: ${{ env.YANDEX_CLOUD_REGISTRY_TAG }}
+          TF_VAR_service_account_id: ${{ vars.YANDEX_CLOUD_DEPLOY_SERVICE_ACCOUNT_ID }}
+        with:
+          command: plan
+          args: >-
+            -no-color
+            -input=false
+          version: ${{ env.TERRAFORM_VERSION }}          
+          chdir: ${{ env.SPECS_PATH }}  
+          gh-summary-token: ${{ secrets.GITHUB_TOKEN }}
+  apply:
+    permissions:
+      contents: read
+    needs: 
+      - plan
+    runs-on: ubuntu-22.04
+    environment: api-review
+    steps:
+      - uses: actions/checkout@v4
+      - name: Issue IAM Token
+        id: issue-iam-token
+        uses: yc-actions/yc-iam-token@v1
+        with:
+          yc-sa-json-credentials: ${{ secrets.YANDEX_CLOUD_TERRAFORM_INFRA_KEY }}
+      - uses: ./.github/actions/terraform/
+        env:
+          YC_TOKEN: ${{ steps.issue-iam-token.outputs.token }}
+          TF_VAR_image: ${{ env.YANDEX_CLOUD_REGISTRY_TAG }}
+          TF_VAR_service_account_id: ${{ vars.YANDEX_CLOUD_DEPLOY_SERVICE_ACCOUNT_ID }}
+        with:
+          command: apply
+          args: >-
+            -no-color
+            -input=false
+            -auto-approve
+          version: ${{ env.TERRAFORM_VERSION }}          
+          chdir: ${{ env.SPECS_PATH }}  
+          gh-summary-token: ${{ secrets.GITHUB_TOKEN }}

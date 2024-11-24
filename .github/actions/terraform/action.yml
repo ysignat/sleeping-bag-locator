@@ -1,0 +1,101 @@
+name: Terraform command
+description: Runs Terraform command
+author: ysignat
+inputs:
+  command:
+    description: Terraform command that will be executed
+    required: true
+  args:
+    description: Arguments passed to command
+    required: false
+    default: ""
+  version:
+    description: Version of terraform binary
+    required: true
+  chdir:
+    description: Path that will be passed to `-chdir` argument
+    required: false
+    default: "${{ github.workspace }}"
+  gh-summary-token:
+    description: Github token for job summary publishing
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ inputs.version }}
+    - name: Initialize terraform workspace
+      shell: sh
+      id: init
+      run: >-
+        terraform
+        -chdir=${{ inputs.chdir }}
+        init
+        -no-color
+      continue-on-error: true
+    - name: Terraform ${{ inputs.command }}
+      shell: sh
+      id: command
+      run: >-
+        terraform
+        -chdir=${{ inputs.chdir }}
+        ${{ inputs.command }}
+        ${{ inputs.args }}
+      continue-on-error: true
+    - name: Add results to summary
+      if: ${{ inputs.summary }}
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ inputs.gh-summary-token }}
+        script: |
+          function outcomeIntoEmoji(outcome) {
+            return outcome == 'success' ? '✅' : '❌'
+          }
+          core.summary.addHeading('Brief', '3')
+          const brief = [
+            [{data: 'Step', header: true}, {data: 'Status', header: true}],
+            [{data: 'init'}, {data: outcomeIntoEmoji('${{ steps.init.outcome }}')}],
+            [{data: '${{ inputs.command }}'}, {data: outcomeIntoEmoji('${{ steps.command.outcome }}')}],
+          ]
+          core.summary.addTable(brief)
+
+          core.summary.addRaw('<details><summary>Verbose Output</summary>', true)
+
+          function outputIntoWrappedCode(output) {
+            return output == '' ? `
+          \`\`\`
+          -
+          \`\`\`
+          ` : `
+          \`\`\`
+          ` + output + `
+          \`\`\`
+          `
+          }
+
+          core.summary.addHeading('Init Output', '3')
+          core.summary.addHeading('OUT', '4')
+          core.summary.addRaw(outputIntoWrappedCode(`${{ steps.init.outputs.stdout }}`), true)
+          core.summary.addHeading('ERR', '4')
+          core.summary.addRaw(outputIntoWrappedCode(`${{ steps.init.outputs.stderr }}`), true)
+
+          core.summary.addHeading('${{ inputs.command }} Output', '3')
+          core.summary.addHeading('OUT', '4')
+          core.summary.addRaw(outputIntoWrappedCode(`${{ steps.command.outputs.stdout }}`), true)
+          core.summary.addHeading('ERR', '4')
+          core.summary.addRaw(outputIntoWrappedCode(`${{ steps.command.outputs.stderr }}`), true)
+
+          core.summary.addRaw('</details>', true)
+
+          core.summary.write()
+    - name: Combined result of previous steps
+      shell: sh
+      run: |-
+        if \
+          [ ${{ steps.init.outputs.exitcode }} -eq 1 ] || \
+          [ ${{ steps.command.outputs.exitcode }} -eq 1 ]
+        then
+          exit 1
+        fi

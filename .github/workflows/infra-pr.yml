@@ -6,131 +6,62 @@ on:
     paths:
       - infra/**
       - .github/workflows/infra-pr.yml
+      - .github/actions/terraform/action.yml
+env:
+  TERRAFORM_VERSION: ~> 1.9.5
+  AWS_ACCESS_KEY: ${{ secrets.YANDEX_CLOUD_TERRAFORM_S3_ACCESS_KEY }}
+  AWS_SECRET_KEY: ${{ secrets.YANDEX_CLOUD_TERRAFORM_S3_SECRET_KEY }}
+  GITHUB_TOKEN: ${{ secrets.GH_TERRAFORM_TOKEN }}
+  SPECS_PATH: infra/
 jobs:
-  check:
+  fmt:
     permissions:
       contents: read
-      pull-requests: write
     runs-on: ubuntu-22.04
-    env:
-      SPECS_PATH: infra/
     steps:
       - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
-        env:
-          TERRAFORM_VERSION: ~> 1.9.5
+      - uses: ./.github/actions/terraform/
         with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-      - name: Check .tf specs formatting
-        id: fmt
-        run: >-
-          terraform
-          fmt
-          -check
-          -diff
-          ${{ env.SPECS_PATH }}
-        continue-on-error: true
-      - name: Initialize terraform workspace
-        id: init
-        env:
-          AWS_ACCESS_KEY: ${{ secrets.YANDEX_CLOUD_TERRAFORM_S3_ACCESS_KEY }}
-          AWS_SECRET_KEY: ${{ secrets.YANDEX_CLOUD_TERRAFORM_S3_SECRET_KEY }}
-        run: terraform
-          -chdir=${{ env.SPECS_PATH }}
-          init
-          -no-color
-        continue-on-error: true
-      - name: Validate .tf specs
-        id: validate
-        run: terraform
-          -chdir=${{ env.SPECS_PATH }}
-          validate
-          -no-color
-        continue-on-error: true
+          command: fmt
+          args: >-
+            -check
+            -diff
+          version: ${{ env.TERRAFORM_VERSION }}
+          chdir: ${{ env.SPECS_PATH }}
+          gh-summary-token: ${{ secrets.GITHUB_TOKEN }}
+  validate:
+    permissions:
+      contents: read
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/terraform/
+        with:
+          command: validate
+          args: >-
+            -no-color
+          version: ${{ env.TERRAFORM_VERSION }}
+          chdir: ${{ env.SPECS_PATH }}
+          gh-summary-token: ${{ secrets.GITHUB_TOKEN }}
+  plan:
+    permissions:
+      contents: read
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
       - name: Issue IAM Token
         id: issue-iam-token
         uses: yc-actions/yc-iam-token@v1
         with:
           yc-sa-json-credentials: ${{ secrets.YANDEX_CLOUD_TERRAFORM_INFRA_KEY }}
-      - name: Create plan
-        id: plan
+      - uses: ./.github/actions/terraform/
         env:
-          AWS_ACCESS_KEY: ${{ secrets.YANDEX_CLOUD_TERRAFORM_S3_ACCESS_KEY }}
-          AWS_SECRET_KEY: ${{ secrets.YANDEX_CLOUD_TERRAFORM_S3_SECRET_KEY }}
           YC_TOKEN: ${{ steps.issue-iam-token.outputs.token }}
-          GITHUB_TOKEN: ${{ secrets.GH_TERRAFORM_TOKEN }}
-        run: terraform
-          -chdir=${{ env.SPECS_PATH }}
-          plan
-          -no-color
-        continue-on-error: true
-      - uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const output = `
-            ### Brief
-            | Check                      | Status                                                     |
-            | -------------------------- | ---------------------------------------------------------- |
-            | Terraform Format and Style | ${{ steps.fmt.outcome == 'success' && '✅' || '❌' }}      |
-            | Terraform Initialization   | ${{ steps.init.outcome == 'success' && '✅' || '❌' }}     |
-            | Terraform Validation       | ${{ steps.validate.outcome == 'success' && '✅' || '❌' }} |
-            | Terraform Plan             | ${{ steps.plan.outcome == 'success' && '✅' || '❌' }}     |
-
-            <details><summary>Verbose Output</summary>
-
-            ### Formatter Output
-            \`\`\`
-            ${{ steps.fmt.outputs.stdout == '' && '-' || steps.fmt.outputs.stdout }}
-            \`\`\`
-
-            ### Initialization Output
-            \`\`\`
-            ${{ steps.init.outputs.stdout == '' && '-' || steps.init.outputs.stdout }}
-            \`\`\`
-
-            \`\`\`
-            ${{ steps.init.outputs.stderr == '' && '-' || steps.init.outputs.stderr }}
-            \`\`\`
-
-            ### Validation Output
-            \`\`\`
-            ${{ steps.validate.outputs.stdout == '' && '-' || steps.validate.outputs.stdout }}
-            \`\`\`
-
-            \`\`\`
-            ${{ steps.validate.outputs.stderr == '' && '-' || steps.validate.outputs.stderr }}
-            \`\`\`
-
-            ### Plan
-            \`\`\`
-            ${{ steps.plan.outputs.stdout == '' && '-' || steps.plan.outputs.stdout }}
-            \`\`\`
-
-            \`\`\`
-            ${{ steps.plan.outputs.stderr == '' && '-' || steps.plan.outputs.stderr }}
-            \`\`\`
-            </details>
-
-            *Pusher: @${{ github.actor }}*
-            *Action: \`${{ github.event_name }}\`* 
-            *Working Directory: \`${{ env.SPECS_PATH }}\`* 
-            *Workflow: \`${{ github.workflow }}\`*
-            `;
-
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: output
-            })
-      - name: Combined result of previous steps
-        run: |-
-          if \
-            [ ${{ steps.fmt.outputs.exitcode }} -eq 1 ] || \
-            [ ${{ steps.init.outputs.exitcode }} -eq 1 ] || \
-            [ ${{ steps.validate.outputs.exitcode }} -eq 1 ] || \
-            [ ${{ steps.plan.outputs.exitcode }} -eq 1 ]
-          then
-            exit 1
-          fi
+          command: plan
+          args: >-
+            -no-color
+            -input=false
+          version: ${{ env.TERRAFORM_VERSION }}
+          chdir: ${{ env.SPECS_PATH }}
+          gh-summary-token: ${{ secrets.GITHUB_TOKEN }}

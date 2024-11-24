@@ -110,6 +110,63 @@ resource "yandex_container_registry_iam_binding" "puller" {
   ]
 }
 
-output "deploy_service_acount_id" {
-  value = yandex_iam_service_account.deploy.id
+resource "github_actions_variable" "deploy_service_acount_id" {
+  repository    = local.repository
+  variable_name = "YANDEX_CLOUD_DEPLOY_SERVICE_ACCOUNT_ID"
+  value         = yandex_iam_service_account.deploy.id
 }
+
+resource "github_actions_variable" "api_artifact_name" {
+  repository    = local.repository
+  variable_name = "API_ARTIFACT_NAME"
+  value         = "api"
+}
+
+resource "github_actions_variable" "yandex_cloud_registry" {
+  repository    = local.repository
+  variable_name = "YANDEX_CLOUD_REGISTRY"
+  value         = "cr.yandex"
+}
+
+resource "github_actions_variable" "_github_registry" {
+  repository    = local.repository
+  variable_name = "_GITHUB_REGISTRY"
+  value         = "ghcr.io"
+}
+
+data "github_user" "ysignat" {
+  username = "ysignat"
+}
+
+resource "github_repository_environment" "infra_review" {
+  environment         = "infra-review"
+  repository          = local.repository
+  prevent_self_review = false
+  can_admins_bypass   = true
+  reviewers {
+    users = [
+      data.github_user.ysignat.id,
+    ]
+  }
+  deployment_branch_policy {
+    protected_branches     = false
+    custom_branch_policies = true
+  }
+}
+
+resource "github_repository_environment" "api_review" {
+  environment         = "api-review"
+  repository          = local.repository
+  prevent_self_review = false
+  can_admins_bypass   = true
+  reviewers {
+    users = [
+      data.github_user.ysignat.id,
+    ]
+  }
+  deployment_branch_policy {
+    protected_branches     = false
+    custom_branch_policies = true
+  }
+}
+
