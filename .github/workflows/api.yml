@@ -91,6 +91,8 @@ jobs:
   publish-image:
     runs-on: ubuntu-22.04
     needs:
+      - fmt
+      - validate
       - build
     permissions:
       contents: read
@@ -160,10 +162,8 @@ jobs:
       contents: read
     needs: 
       - plan
-      - fmt
-      - validate
     runs-on: ubuntu-22.04
-    environment: ${{ github.event_name == 'push' && github.ref_name == 'main' && 'api-review' || '' }}
+    environment: ${{ github.event_name == 'push' && github.ref_name == 'main' && '' || 'api-review' }}
     steps:
       - uses: actions/checkout@v4
       - name: Issue IAM Token
