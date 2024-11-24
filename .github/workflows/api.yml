@@ -1,4 +1,4 @@
-name: Pull request API checks and deployment
+name: API deployment
 on:
   push:
     branches:
@@ -132,7 +132,7 @@ jobs:
     needs: 
       - plan
     runs-on: ubuntu-22.04
-    environment: api-review
+    environment: ${{ github.event_name == 'push' && github.ref_name == 'main' && 'api-review' || '' }}
     steps:
       - uses: actions/checkout@v4
       - name: Issue IAM Token

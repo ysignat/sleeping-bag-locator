@@ -45,7 +45,6 @@ runs:
         ${{ inputs.args }}
       continue-on-error: true
     - name: Add results to summary
-      if: ${{ inputs.summary }}
       uses: actions/github-script@v7
       with:
         github-token: ${{ inputs.gh-summary-token }}
