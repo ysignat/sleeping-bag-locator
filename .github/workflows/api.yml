@@ -10,14 +10,11 @@ on:
       - .github/workflows/api.yml
       - deploy/**
 env:
-  YANDEX_CLOUD_REGISTRY: cr.yandex
   BUILD_ROOT: dist
-  TERRAFORM_VERSION: ~> 1.9.5
   AWS_ACCESS_KEY: ${{ secrets.YANDEX_CLOUD_TERRAFORM_S3_ACCESS_KEY }}
   AWS_SECRET_KEY: ${{ secrets.YANDEX_CLOUD_TERRAFORM_S3_SECRET_KEY }}
-  GITHUB_TOKEN: ${{ secrets.GH_TERRAFORM_TOKEN }}
   SPECS_PATH: deploy/
-  GITHUB_REGISTRY_TAG: ${{ vars._GITHUB_REGISTRY }}/${{ github.repository }}/${{ vars.API_ARTIFACT_NAME }}:beta-${{ github.run_id }}
+  GITHUB_REGISTRY_TAG: ${{ vars.GH_REGISTRY }}/${{ github.repository }}/${{ vars.API_ARTIFACT_NAME }}:beta-${{ github.run_id }}
   YANDEX_CLOUD_REGISTRY_TAG: 
     ${{ vars.YANDEX_CLOUD_REGISTRY }}/${{ vars.YANDEX_CLOUD_REGISTRY_ID }}/${{ vars.API_ARTIFACT_NAME }}:beta-${{ github.run_id }}
 jobs:
@@ -84,7 +81,7 @@ jobs:
       - name: Log in to the Yandex Cloud container registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.YANDEX_CLOUD_REGISTRY }}
+          registry: ${{ vars.YANDEX_CLOUD_REGISTRY }}
           username: json_key
           password: ${{ secrets.YANDEX_CLOUD_REGISTRY_KEY }}
       - name: Build and push image
@@ -125,7 +122,7 @@ jobs:
           args: >-
             -no-color
             -input=false
-          version: ${{ env.TERRAFORM_VERSION }}          
+          version: ${{ vars.TERRAFORM_VERSION }}          
           chdir: ${{ env.SPECS_PATH }}  
           gh-summary-token: ${{ secrets.GITHUB_TOKEN }}
   apply:
@@ -153,6 +150,6 @@ jobs:
             -no-color
             -input=false
             -auto-approve
-          version: ${{ env.TERRAFORM_VERSION }}          
+          version: ${{ vars.TERRAFORM_VERSION }}          
           chdir: ${{ env.SPECS_PATH }}  
           gh-summary-token: ${{ secrets.GITHUB_TOKEN }}
