@@ -1,8 +1,9 @@
 name: Pull request API checks and deployment
 on:
-  pull_request:
+  push:
     branches:
-      - main
+      # - main
+      - feature/separate-pr-and-release-flows-for-api
     paths:
       - src/**
       - Cargo.*
@@ -75,7 +76,7 @@ jobs:
       - name: Log in to the GitHub container registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ vars._GITHUB_REGISTRY }}
+          registry: ${{ vars.GH_REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Log in to the Yandex Cloud container registry
