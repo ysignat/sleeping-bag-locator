@@ -34,13 +34,20 @@ variable "image" {
   nullable    = false
 }
 
+variable "service_account_id" {
+  type        = string
+  description = "ID of service account used in Serverless Containers"
+  sensitive   = false
+  nullable    = false
+}
+
 resource "yandex_serverless_container" "api" {
   name               = "api"
   memory             = 128
   execution_timeout  = "5s"
   cores              = 1
   core_fraction      = 100
-  service_account_id = "ajevo27uqujvgf7q0ka4" # `deploy` service account
+  service_account_id = var.service_account_id
   image {
     url = var.image
     command = [
