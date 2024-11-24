@@ -12,20 +12,23 @@ use axum::{
     Router,
 };
 use chrono::{NaiveDateTime, Utc};
+use constants::{
+    BIND_ADDRESS,
+    DEFAULT_PAGINATION_LIMIT,
+    DEFAULT_PAGINATION_PAGE,
+    MAX_ITEM_LOCATION_LENGTH,
+    MAX_ITEM_NAME_LENGTH,
+    PAGINATION_LIMIT_HEADER,
+    PAGINATION_PAGE_HEADER,
+};
 use errors::AppError;
 use serde::{Deserialize, Serialize};
 use tokio::net::TcpListener;
 use uuid::Uuid;
 
+mod constants;
+mod dao;
 mod errors;
-
-const BIND_ADDRESS: &str = "0.0.0.0";
-const PAGINATION_LIMIT_HEADER: &str = "Pagination-Limit";
-const DEFAULT_PAGINATION_LIMIT: u32 = 10;
-const PAGINATION_PAGE_HEADER: &str = "Pagination-Page";
-const DEFAULT_PAGINATION_PAGE: u32 = 1;
-const MAX_ITEM_NAME_LENGTH: usize = 128;
-const MAX_ITEM_LOCATION_LENGTH: usize = 128;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(try_from = "String")]
@@ -83,13 +86,13 @@ struct UpdateItemBody {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(try_from = "Option<u32>")]
-struct Page(u32);
+#[serde(try_from = "Option<usize>")]
+struct Page(usize);
 
-impl TryFrom<Option<u32>> for Page {
+impl TryFrom<Option<usize>> for Page {
     type Error = String;
 
-    fn try_from(value: Option<u32>) -> Result<Self, Self::Error> {
+    fn try_from(value: Option<usize>) -> Result<Self, Self::Error> {
         match value {
             Some(page) => {
                 if page.eq(&0) {
@@ -112,13 +115,13 @@ impl TryInto<HeaderValue> for Page {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(try_from = "Option<u32>")]
-struct Limit(u32);
+#[serde(try_from = "Option<usize>")]
+struct Limit(usize);
 
-impl TryFrom<Option<u32>> for Limit {
+impl TryFrom<Option<usize>> for Limit {
     type Error = String;
 
-    fn try_from(value: Option<u32>) -> Result<Self, Self::Error> {
+    fn try_from(value: Option<usize>) -> Result<Self, Self::Error> {
         match value {
             Some(limit) => {
                 if limit.eq(&0) {
