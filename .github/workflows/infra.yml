@@ -1,5 +1,12 @@
-name: Main flow for infrastructure deployment
+name: Infrastructure deployment
 on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - infra/**
+      - .github/workflows/infra.yml
+      - .github/actions/terraform/action.yml
   push:
     branches:
       - main
@@ -8,12 +15,40 @@ on:
       - .github/workflows/infra.yml
       - .github/actions/terraform/action.yml
 env:
-  TERRAFORM_VERSION: ~> 1.9.5
   AWS_ACCESS_KEY: ${{ secrets.YANDEX_CLOUD_TERRAFORM_S3_ACCESS_KEY }}
   AWS_SECRET_KEY: ${{ secrets.YANDEX_CLOUD_TERRAFORM_S3_SECRET_KEY }}
   GITHUB_TOKEN: ${{ secrets.GH_TERRAFORM_TOKEN }}
   SPECS_PATH: infra/
 jobs:
+  fmt:
+    permissions:
+      contents: read
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/terraform/
+        with:
+          command: fmt
+          args: >-
+            -check
+            -diff
+          version: ${{ vars.TERRAFORM_VERSION }}
+          chdir: ${{ env.SPECS_PATH }}
+          gh-summary-token: ${{ secrets.GITHUB_TOKEN }}
+  validate:
+    permissions:
+      contents: read
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/terraform/
+        with:
+          command: validate
+          args: >-
+            -no-color
+          version: ${{ vars.TERRAFORM_VERSION }}
+          chdir: ${{ env.SPECS_PATH }}
+          gh-summary-token: ${{ secrets.GITHUB_TOKEN }}
   plan:
     permissions:
       contents: read
@@ -33,14 +68,17 @@ jobs:
           args: >-
             -no-color
             -input=false
-          version: ${{ env.TERRAFORM_VERSION }}          
-          chdir: ${{ env.SPECS_PATH }}  
+          version: ${{ vars.TERRAFORM_VERSION }}
+          chdir: ${{ env.SPECS_PATH }}
           gh-summary-token: ${{ secrets.GITHUB_TOKEN }}
   apply:
     permissions:
       contents: read
     needs: 
       - plan
+      - fmt
+      - validate
+    if: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
     runs-on: ubuntu-22.04
     environment: infra-review
     steps:
@@ -59,6 +97,7 @@ jobs:
             -no-color
             -input=false
             -auto-approve
-          version: ${{ env.TERRAFORM_VERSION }}          
+          version: ${{ vars.TERRAFORM_VERSION }}          
           chdir: ${{ env.SPECS_PATH }}  
           gh-summary-token: ${{ secrets.GITHUB_TOKEN }}
+        
