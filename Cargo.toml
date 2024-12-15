@@ -1,19 +1,31 @@
 [package]
 name = "sleeping-bag-locator"
 version = "0.1.0"
+authors = ["ysignat <ignatovegors@gmail.com>"]
 edition = "2021"
 rust-version = "1.80"
+description = "Pet project for tracking my belongings"
+readme = "README.md"
+repository = "https://github.com/ysignat/sleeping-bag-locator"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+module_name_repetitions = "allow"
 
 [[bin]]
 name = "api"
 path = "src/main.rs"
 
 [dependencies]
-anyhow = "1.0.93"
+anyhow = "1.0.94"
 axum = { version = "0.7.9", features = ["macros"] }
-chrono = { version = "0.4.34", features = ["serde"] }
-serde = { version = "1.0.215", features = ["derive"] }
-tokio = { version = "1.41.1", features = ["macros", "rt-multi-thread"] }
+chrono = { version = "0.4.39", features = ["serde"] }
+clap = { version = "4.5.23", features = ["env", "derive", "string", "cargo"] }
+serde = { version = "1.0.216", features = ["derive"] }
+tokio = { version = "1.42.0", features = ["macros", "rt-multi-thread"] }
 uuid = { version = "1.11.0", features = ["v4", "serde"] }
 
 [dev-dependencies]

@@ -53,6 +53,9 @@ resource "yandex_serverless_container" "api" {
     command = [
       "api"
     ]
+    environment = {
+      HOST = "0.0.0.0"
+    }
   }
   provision_policy {
     min_instances = 1

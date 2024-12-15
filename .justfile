@@ -29,6 +29,7 @@ start:
     --publish '8080:8080' \
     --workdir "${WORKDIR}" \
     --name "${CONTAINER_NAME}" \
+    --env "HOST=0.0.0.0" \
     "${TAG}"
 
 stop:
