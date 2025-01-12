@@ -35,20 +35,19 @@ To manage infrastructure you need a service account and its static keys
 A service account can be created via
 
 ```sh
-yc yc iam service-account create --name terraform --description '
-SA for terraform-related actions'
+yc iam service-account create --name sleeping-bag-locator-terraform --description 'SA for terraform-related actions'
 ```
 
 Since you wish to manage all of the infrastructure in your project with this service account, you have to give it a `Folder - Admin` role.
 
 ```sh
-yc resource-manager folder add-access-binding --id $(yc config get folder-id) --role admin --service-account-name terraform
+yc resource-manager folder add-access-binding --id $(yc config get folder-id) --role admin --service-account-name sleeping-bag-locator-terraform
 ```
 
 Also you need static keys for this service account to use it in services with AWS-compatible API
 
 ```sh
-yc iam access-key create --service-account-name terraform
+yc iam access-key create --service-account-name sleeping-bag-locator-terraform
 ```
 
 > Save the `ACCESS_KEY` (`access_key.id`) and `SECRET_KEY` (`secret`). You will not be able to get their values again
