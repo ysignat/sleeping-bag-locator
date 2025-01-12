@@ -4,6 +4,9 @@ set dotenv-load := true
 CONTAINER_NAME := 'api'
 ALPINE_VERSION := '3.20'
 YC_PROFILE_NAME := 'sleeping-bag-locator-terraform'
+AWS_REGION := 'ru-central1'
+AWS_ACCESS_KEY_ID := env('AWS_ACCESS_KEY')
+AWS_SECRET_ACCESS_KEY := env('AWS_SECRET_KEY')
 
 default:
   @just --list
@@ -48,3 +51,6 @@ _yc-iam:
 
 tf target *args:
   YC_TOKEN=$(just _yc-iam) terraform -chdir={{ target }} {{ args }}
+
+aws *args:
+  poetry run aws {{ args }}

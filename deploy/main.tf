@@ -5,15 +5,17 @@ terraform {
       version = "~> 0.129"
     }
   }
-  required_version = "~> 1.9.5"
+  required_version = "~> 1.10.0"
 
   backend "s3" {
     endpoints = {
-      s3 = "https://storage.yandexcloud.net"
+      s3       = "https://storage.yandexcloud.net"
+      dynamodb = "https://docapi.serverless.yandexcloud.net/ru-central1/b1g92d8a7m2lbe44meuq/etn9ja887cgvon0b54gf"
     }
-    bucket = "sleeping-bag-locator-terraform"
-    region = "ru-central1"
-    key    = "deploy.tfstate"
+    bucket         = "sleeping-bag-locator-terraform"
+    region         = "ru-central1"
+    key            = "deploy.tfstate"
+    dynamodb_table = "state-lock-table"
 
     skip_region_validation      = true
     skip_credentials_validation = true

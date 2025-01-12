@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "sleeping-bag-locator"
+version = "0.1.0"
+description = ""
+authors = ["ysignat <ignatovegors@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+awscli = "^1.36.38"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -46,7 +46,7 @@ resource "github_actions_variable" "gh_registry" {
 resource "github_actions_variable" "terraform_version" {
   repository    = local.repository
   variable_name = "TERRAFORM_VERSION"
-  value         = "~> 1.9.5"
+  value         = "~> 1.10.0"
 }
 
 data "github_user" "ysignat" {
