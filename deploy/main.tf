@@ -52,9 +52,6 @@ resource "yandex_serverless_container" "api" {
   service_account_id = var.service_account_id
   image {
     url = var.image
-    command = [
-      "api"
-    ]
     environment = {
       HOST = "0.0.0.0"
     }
