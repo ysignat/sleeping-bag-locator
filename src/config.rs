@@ -3,7 +3,7 @@ use std::net::{IpAddr, Ipv4Addr};
 use clap::{value_parser, Args, Parser, ValueEnum};
 
 #[derive(Parser, Debug)]
-#[clap(version, about, ignore_errors = true)] // we need to ignore errors here cause somehow YCloud runs serverless container with ["/bin/sh", "/bin/api"] CLI args and it ruins clap
+#[clap(version, about)]
 pub struct Config {
     #[command(flatten)]
     pub runtime_args: AppArgs,
