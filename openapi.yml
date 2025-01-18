@@ -169,3 +169,8 @@ paths:
       responses:
         "204":
           description: Deleted
+  /health:
+    get:
+      responses:
+        "200":
+          description: OK

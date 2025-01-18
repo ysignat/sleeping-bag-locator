@@ -18,4 +18,5 @@ pub trait DaoTrait {
     async fn get(&self, id: Uuid) -> Result<Entity>;
     async fn update(&self, id: Uuid, mutable_params: MutableParams) -> Result<Entity>;
     async fn delete(&self, id: Uuid) -> Result<()>;
+    async fn health(&self) -> Result<()>;
 }

@@ -84,3 +84,10 @@ pub async fn delete(
 
     Ok(StatusCode::NO_CONTENT)
 }
+
+#[debug_handler]
+pub async fn health(State(state): State<AppState>) -> Result<impl IntoResponse, AppError> {
+    state.health().await?;
+
+    Ok(StatusCode::OK)
+}
