@@ -53,7 +53,9 @@ resource "yandex_serverless_container" "api" {
   image {
     url = var.image
     environment = {
-      HOST = "0.0.0.0"
+      HOST       = "0.0.0.0"
+      LOG_LEVEL  = "DEBUG"
+      LOG_FORMAT = "json"
     }
   }
   provision_policy {
