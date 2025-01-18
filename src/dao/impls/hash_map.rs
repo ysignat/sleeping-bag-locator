@@ -84,6 +84,10 @@ impl DaoTrait for HashMapDao {
         let mut data = self.write();
         data.remove(&id).context("No Such Entity").and(Ok(()))
     }
+
+    async fn health(&self) -> anyhow::Result<()> {
+        Ok(())
+    }
 }
 
 #[cfg(test)]

@@ -35,6 +35,7 @@ async fn main() {
                 .put(handlers::update)
                 .delete(handlers::delete),
         )
+        .route("/health", get(handlers::health))
         .with_state(state);
 
     axum::serve(listener, router).await.unwrap();

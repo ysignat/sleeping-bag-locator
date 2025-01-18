@@ -51,4 +51,8 @@ impl DaoTrait for MockedDao {
     async fn delete(&self, _: Uuid) -> anyhow::Result<()> {
         Ok(())
     }
+
+    async fn health(&self) -> anyhow::Result<()> {
+        Ok(())
+    }
 }
