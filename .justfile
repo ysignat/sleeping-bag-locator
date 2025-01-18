@@ -17,6 +17,7 @@ start:
 
   WORKDIR='/app'
   RUST_VERSION="$(grep 'rust-version' Cargo.toml | sed 's/rust-version = \"\(.*\)\"/\1/')"
+  PORT='8080'
   TAG="$(
     docker build \
       --quiet \
@@ -29,10 +30,11 @@ start:
     --rm \
     --user "$(id -u):$(id -g)" \
     --volume "${PWD}:${WORKDIR}" \
-    --publish '8080:8080' \
+    --publish "${PORT}:${PORT}" \
     --workdir "${WORKDIR}" \
     --name "${CONTAINER_NAME}" \
     --env "HOST=0.0.0.0" \
+    --env "PORT=${PORT}" \
     "${TAG}"
 
 stop:
