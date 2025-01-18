@@ -73,3 +73,6 @@ submit *args:
   git push
 
   gh pr create --base main --web
+
+delete:
+  git branch --merged | grep -v 'main' | xargs --no-run-if-empty git branch --delete
