@@ -18,6 +18,7 @@ on:
       - src/**
       - Cargo.*
       - Dockerfile
+
 env:
   BUILD_ROOT: dist
   AWS_ACCESS_KEY: ${{ secrets.YANDEX_CLOUD_TERRAFORM_S3_ACCESS_KEY }}
@@ -26,6 +27,7 @@ env:
   GITHUB_REGISTRY_TAG: ${{ vars.GH_REGISTRY }}/${{ github.repository }}/${{ vars.API_ARTIFACT_NAME }}:beta-${{ github.run_id }}
   YANDEX_CLOUD_REGISTRY_TAG: 
     ${{ vars.YANDEX_CLOUD_REGISTRY }}/${{ vars.YANDEX_CLOUD_REGISTRY_ID }}/${{ vars.API_ARTIFACT_NAME }}:beta-${{ github.run_id }}
+
 jobs:
   fmt:
     permissions:
@@ -42,6 +44,7 @@ jobs:
           version: ${{ vars.TERRAFORM_VERSION }}
           chdir: ${{ env.SPECS_PATH }}
           gh-summary-token: ${{ secrets.GITHUB_TOKEN }}
+
   validate:
     permissions:
       contents: read
@@ -56,6 +59,7 @@ jobs:
           version: ${{ vars.TERRAFORM_VERSION }}
           chdir: ${{ env.SPECS_PATH }}
           gh-summary-token: ${{ secrets.GITHUB_TOKEN }}
+
   build:
     permissions:
       contents: read
@@ -89,6 +93,17 @@ jobs:
           --root ${{ env.BUILD_ROOT }}
           --bin ${{ vars.API_ARTIFACT_NAME }}
           --path .
+          --locked
+      - name: Run tests
+        run: >-
+          cargo
+          +${{ env.TOOLCHAIN }}
+          test
+          --no-fail-fast
+          --workspace
+          --profile release
+          --target ${{ env.TARGET }}
+          --bin ${{ vars.API_ARTIFACT_NAME }}
           --locked
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -139,6 +154,7 @@ jobs:
             SRC_BINARY_PATH=${{ env.SRC_BINARY_PATH }}
             ALPINE_VERSION=${{ env.ALPINE_VERSION }}
           context: ${{ env.BUILD_ROOT }}
+
   plan:
     permissions:
       contents: read
@@ -165,6 +181,7 @@ jobs:
           version: ${{ vars.TERRAFORM_VERSION }}          
           chdir: ${{ env.SPECS_PATH }}  
           gh-summary-token: ${{ secrets.GITHUB_TOKEN }}
+
   apply:
     permissions:
       contents: read

@@ -54,3 +54,22 @@ tf target *args:
 
 aws *args:
   poetry run aws {{ args }}
+
+submit *args:
+  #!/usr/bin/env sh
+  set -eu
+
+  GITHUB_TOKEN=${GITHUB_TOKEN}
+
+  current_branch="$(git branch --show-current)"
+
+  if [ "${current_branch}" = 'main' ]
+  then
+    git checkout -b "feature/${USER}/$(uuidgen)"
+  fi
+
+  git add "{{ args }}"
+  git commit
+  git push
+
+  gh pr create --base main --web
