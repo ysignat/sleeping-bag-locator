@@ -9,11 +9,11 @@ repos:
           - --strict
           - --force-scope
           - --scopes
-          - openapi,local,api,build,infra,deploy,docs,observability
+          - openapi,local,api,build,infra,deploy,docs,observability,test
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
     hooks:
       - id: no-commit-to-branch
         args:
           - --pattern
-          - '^(?!((feature|hotfix)\/[a-zA-Z0-9\-]+)$).*'
+          - '^(?!((feature|hotfix)\/[a-zA-Z0-9\-\/]+)$).*'
