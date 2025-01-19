@@ -49,6 +49,12 @@ resource "github_actions_variable" "terraform_version" {
   value         = "~> 1.10.0"
 }
 
+resource "github_actions_variable" "alpine_version" {
+  repository    = local.repository
+  variable_name = "ALPINE_VERSION"
+  value         = "3.20"
+}
+
 data "github_user" "ysignat" {
   username = "ysignat"
 }
