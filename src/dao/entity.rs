@@ -1,5 +1,5 @@
-use anyhow::anyhow;
 use chrono::{NaiveDateTime, Utc};
+use thiserror::Error;
 use uuid::Uuid;
 
 use super::params::{MutableParams, Params};
@@ -35,7 +35,7 @@ impl Entity {
         self.updated_at
     }
 
-    pub fn try_mutate(self, mutation: &MutableParams) -> anyhow::Result<Self> {
+    pub fn try_mutate(self, mutation: &MutableParams) -> Result<Self, EntityBuilderError> {
         let now = Utc::now().naive_utc();
         let entity = EntityBuilder::new()
             .id(self.id)
@@ -50,7 +50,7 @@ impl Entity {
 }
 
 impl TryInto<Entity> for Params {
-    type Error = anyhow::Error;
+    type Error = EntityBuilderError;
 
     fn try_into(self) -> Result<Entity, Self::Error> {
         let entity = EntityBuilder::new()
@@ -68,6 +68,30 @@ pub struct EntityBuilder {
     location: Option<String>,
     created_at: NaiveDateTime,
     updated_at: NaiveDateTime,
+}
+
+#[derive(Error, Debug)]
+#[cfg_attr(test, derive(PartialEq))]
+pub enum EntityBuilderError {
+    #[error("Name was not set in builder")]
+    NameNotSet,
+    #[error("Empty name is not allowed")]
+    NameIsEmpty,
+    #[error("Name '{name:?}' is very long")]
+    NameTooLong { name: String },
+    #[error("Location was not set in builder")]
+    LocationNotSet,
+    #[error("Empty location is not allowed")]
+    LocationIsEmpty,
+    #[error("Location '{location:?}' is very long")]
+    LocationTooLong { location: String },
+    #[error(
+        "Last update time ({updated_at:?}) cannot be less than creation time ({created_at:?})"
+    )]
+    UpdatedBeforeCreation {
+        updated_at: NaiveDateTime,
+        created_at: NaiveDateTime,
+    },
 }
 
 impl Default for EntityBuilder {
@@ -116,30 +140,29 @@ impl EntityBuilder {
         self
     }
 
-    pub fn build(self) -> anyhow::Result<Entity> {
-        let name = self.name.ok_or(anyhow!("Name was not set in builder"))?;
-        let location = self
-            .location
-            .ok_or(anyhow!("Location was not set in builder"))?;
+    pub fn build(self) -> Result<Entity, EntityBuilderError> {
+        let name = self.name.ok_or(EntityBuilderError::NameNotSet)?;
+        let location = self.location.ok_or(EntityBuilderError::LocationNotSet)?;
 
         if name.is_empty() {
-            return Err(anyhow!("Empty name is not allowed"));
+            return Err(EntityBuilderError::NameIsEmpty);
         }
         if name.len().gt(&Self::MAX_NAME_LENGTH) {
-            return Err(anyhow!("Name is very long"));
+            return Err(EntityBuilderError::NameTooLong { name });
         }
 
         if location.is_empty() {
-            return Err(anyhow!("Empty location is not allowed"));
+            return Err(EntityBuilderError::LocationIsEmpty);
         }
         if location.len().gt(&Self::MAX_LOCATION_LENGTH) {
-            return Err(anyhow!("Location is very long"));
+            return Err(EntityBuilderError::LocationTooLong { location });
         }
 
         if self.updated_at.lt(&self.created_at) {
-            return Err(anyhow!(
-                "Last update time cannot be less than creation time"
-            ));
+            return Err(EntityBuilderError::UpdatedBeforeCreation {
+                updated_at: self.updated_at,
+                created_at: self.created_at,
+            });
         }
 
         Ok(Entity {
@@ -175,44 +198,46 @@ mod tests {
 
     #[test]
     fn location_not_set() {
-        let location = CityName().fake();
-        let builder = EntityBuilder::default();
-        println!("{builder:#?}");
-        let builder_err = builder.location(location).build();
-        println!("{builder_err:#?}");
-
-        assert!(builder_err.is_err());
-    }
-
-    #[test]
-    fn name_not_set() {
         let name = Word().fake();
         let builder = EntityBuilder::default();
         println!("{builder:#?}");
         let builder_err = builder.name(name).build();
         println!("{builder_err:#?}");
 
-        assert!(builder_err.is_err());
+        assert_eq!(builder_err, Err(EntityBuilderError::LocationNotSet));
+    }
+
+    #[test]
+    fn name_not_set() {
+        let location = CityName().fake();
+        let builder = EntityBuilder::default();
+        println!("{builder:#?}");
+        let builder_err = builder.location(location).build();
+        println!("{builder_err:#?}");
+
+        assert_eq!(builder_err, Err(EntityBuilderError::NameNotSet));
     }
 
     #[test]
     fn empty_location() {
         let builder = EntityBuilder::default();
+        let name = Word().fake();
         println!("{builder:#?}");
-        let builder_err = builder.location(String::new()).build();
+        let builder_err = builder.location(String::new()).name(name).build();
         println!("{builder_err:#?}");
 
-        assert!(builder_err.is_err());
+        assert_eq!(builder_err, Err(EntityBuilderError::LocationIsEmpty));
     }
 
     #[test]
     fn empty_name() {
         let builder = EntityBuilder::default();
+        let location = CityName().fake();
         println!("{builder:#?}");
-        let builder_err = builder.name(String::new()).build();
+        let builder_err = builder.name(String::new()).location(location).build();
         println!("{builder_err:#?}");
 
-        assert!(builder_err.is_err());
+        assert_eq!(builder_err, Err(EntityBuilderError::NameIsEmpty));
     }
 
     #[test]
@@ -220,12 +245,16 @@ mod tests {
         let location: String = ((EntityBuilder::MAX_LOCATION_LENGTH + 1)
             ..(EntityBuilder::MAX_LOCATION_LENGTH * 2))
             .fake();
+        let name = Word().fake();
         let builder = EntityBuilder::default();
         println!("{builder:#?}");
-        let builder_err = builder.location(location).build();
+        let builder_err = builder.location(location.clone()).name(name).build();
         println!("{builder_err:#?}");
 
-        assert!(builder_err.is_err());
+        assert_eq!(
+            builder_err,
+            Err(EntityBuilderError::LocationTooLong { location })
+        );
     }
 
     #[test]
@@ -233,12 +262,13 @@ mod tests {
         let name: String = ((EntityBuilder::MAX_LOCATION_LENGTH + 1)
             ..(EntityBuilder::MAX_LOCATION_LENGTH * 2))
             .fake();
+        let location = CityName().fake();
         let builder = EntityBuilder::default();
         println!("{builder:#?}");
-        let builder_err = builder.name(name).build();
+        let builder_err = builder.name(name.clone()).location(location).build();
         println!("{builder_err:#?}");
 
-        assert!(builder_err.is_err());
+        assert_eq!(builder_err, Err(EntityBuilderError::NameTooLong { name }));
     }
 
     #[test]
@@ -254,7 +284,7 @@ mod tests {
     }
 
     #[test]
-    fn created_later_than_updated() {
+    fn updated_before_creation() {
         let location = CityName().fake();
         let name = Word().fake();
         let updated_at = Utc::now().naive_utc();
@@ -270,7 +300,13 @@ mod tests {
             .build();
         println!("{builder_err:#?}");
 
-        assert!(builder_err.is_err());
+        assert_eq!(
+            builder_err,
+            Err(EntityBuilderError::UpdatedBeforeCreation {
+                updated_at,
+                created_at
+            })
+        );
     }
 
     #[test]
