@@ -110,10 +110,10 @@ paths:
               schema:
                 $ref: "#/components/schemas/ItemsArray"
           headers:
-            Pagination-Page:
+            pagination-page:
               schema:
                 $ref: "#/components/schemas/Page"
-            Pagination-Limit:
+            pagination-limit:
               schema:
                 $ref: "#/components/schemas/Limit"
         "422":
