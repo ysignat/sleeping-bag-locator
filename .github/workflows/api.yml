@@ -143,7 +143,6 @@ jobs:
         uses: docker/build-push-action@v6
         env:
           SRC_BINARY_PATH: bin/${{ vars.API_ARTIFACT_NAME }}
-          ALPINE_VERSION: "3.20"
         with:
           push: true
           file: ${{ github.workspace }}/Dockerfile
