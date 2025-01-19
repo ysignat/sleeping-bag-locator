@@ -4,8 +4,8 @@ use serde::Deserialize;
 use super::errors::AppError;
 use crate::dao::{Pagination, PaginationBuilder};
 
-pub const PAGINATION_LIMIT_HEADER: &str = "Pagination-Limit";
-pub const PAGINATION_PAGE_HEADER: &str = "Pagination-Page";
+pub const PAGINATION_LIMIT_HEADER: &str = "pagination-limit";
+pub const PAGINATION_PAGE_HEADER: &str = "pagination-page";
 
 #[derive(Deserialize, Clone)]
 pub struct HttpPaginationParams {
