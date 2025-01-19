@@ -3,8 +3,8 @@ use std::sync::Arc;
 use axum::{routing::get, Router};
 use clap::Parser;
 use config::{Config, DaoType, LogFormat};
-use dao::{HashMapDao, MockedDao};
-use http::{handlers, AppState};
+use dao::{ItemsHashMapDao, ItemsMockedDao};
+use http::{create_item, delete_item, get_item, health, list_items, update_item, AppState};
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use tracing::{error, info};
@@ -53,24 +53,26 @@ async fn main() {
     let state: AppState = match args.runtime.dao_type {
         DaoType::Mocked => {
             info!(target : TRACING_STARTUP_TARGET, "Using MockedDao");
-            Arc::new(MockedDao {})
+            AppState {
+                items: Arc::new(ItemsMockedDao {}),
+            }
         }
         DaoType::HashMap => {
             info!(target : TRACING_STARTUP_TARGET, "Using HashMapDao");
-            Arc::new(HashMapDao::new())
+            AppState {
+                items: Arc::new(ItemsHashMapDao::new()),
+            }
         }
     };
 
     let router = Router::new()
-        .route("/items", get(handlers::list).post(handlers::create))
+        .route("/items", get(list_items).post(create_item))
         .route(
             "/items/:id",
-            get(handlers::get)
-                .put(handlers::update)
-                .delete(handlers::delete),
+            get(get_item).put(update_item).delete(delete_item),
         )
         .layer(TraceLayer::new_for_http())
-        .route("/health", get(handlers::health))
+        .route("/health", get(health))
         .with_state(state);
     info!(target : TRACING_STARTUP_TARGET, "Created router");
 

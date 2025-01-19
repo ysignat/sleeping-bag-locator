@@ -2,11 +2,9 @@ use chrono::{NaiveDateTime, Utc};
 use thiserror::Error;
 use uuid::Uuid;
 
-use super::params::{MutableParams, Params};
-
 #[derive(Clone)]
 #[cfg_attr(test, derive(Debug, Eq, PartialEq))]
-pub struct Entity {
+pub struct Item {
     id: Uuid,
     name: String,
     location: String,
@@ -14,7 +12,7 @@ pub struct Entity {
     updated_at: NaiveDateTime,
 }
 
-impl Entity {
+impl Item {
     pub fn id(&self) -> Uuid {
         self.id
     }
@@ -34,35 +32,10 @@ impl Entity {
     pub fn updated_at(&self) -> NaiveDateTime {
         self.updated_at
     }
-
-    pub fn try_mutate(self, mutation: &MutableParams) -> Result<Self, EntityBuilderError> {
-        let now = Utc::now().naive_utc();
-        let entity = EntityBuilder::new()
-            .id(self.id)
-            .name(mutation.name().to_owned())
-            .location(mutation.location().to_owned())
-            .created_at(self.created_at)
-            .update_at(now)
-            .build()?;
-
-        Ok(entity)
-    }
-}
-
-impl TryInto<Entity> for Params {
-    type Error = EntityBuilderError;
-
-    fn try_into(self) -> Result<Entity, Self::Error> {
-        let entity = EntityBuilder::new()
-            .location(self.location().to_owned())
-            .name(self.name().to_owned())
-            .build()?;
-        Ok(entity)
-    }
 }
 
 #[cfg_attr(test, derive(Debug))]
-pub struct EntityBuilder {
+pub struct ItemBuilder {
     id: Uuid,
     name: Option<String>,
     location: Option<String>,
@@ -72,7 +45,7 @@ pub struct EntityBuilder {
 
 #[derive(Error, Debug)]
 #[cfg_attr(test, derive(PartialEq))]
-pub enum EntityBuilderError {
+pub enum ItemBuilderError {
     #[error("Name was not set in builder")]
     NameNotSet,
     #[error("Empty name is not allowed")]
@@ -94,7 +67,7 @@ pub enum EntityBuilderError {
     },
 }
 
-impl Default for EntityBuilder {
+impl Default for ItemBuilder {
     fn default() -> Self {
         let now = Utc::now().naive_utc();
         Self {
@@ -107,7 +80,7 @@ impl Default for EntityBuilder {
     }
 }
 
-impl EntityBuilder {
+impl ItemBuilder {
     const MAX_NAME_LENGTH: usize = 128;
     const MAX_LOCATION_LENGTH: usize = 128;
 
@@ -140,32 +113,32 @@ impl EntityBuilder {
         self
     }
 
-    pub fn build(self) -> Result<Entity, EntityBuilderError> {
-        let name = self.name.ok_or(EntityBuilderError::NameNotSet)?;
-        let location = self.location.ok_or(EntityBuilderError::LocationNotSet)?;
+    pub fn build(self) -> Result<Item, ItemBuilderError> {
+        let name = self.name.ok_or(ItemBuilderError::NameNotSet)?;
+        let location = self.location.ok_or(ItemBuilderError::LocationNotSet)?;
 
         if name.is_empty() {
-            return Err(EntityBuilderError::NameIsEmpty);
+            return Err(ItemBuilderError::NameIsEmpty);
         }
         if name.len().gt(&Self::MAX_NAME_LENGTH) {
-            return Err(EntityBuilderError::NameTooLong { name });
+            return Err(ItemBuilderError::NameTooLong { name });
         }
 
         if location.is_empty() {
-            return Err(EntityBuilderError::LocationIsEmpty);
+            return Err(ItemBuilderError::LocationIsEmpty);
         }
         if location.len().gt(&Self::MAX_LOCATION_LENGTH) {
-            return Err(EntityBuilderError::LocationTooLong { location });
+            return Err(ItemBuilderError::LocationTooLong { location });
         }
 
         if self.updated_at.lt(&self.created_at) {
-            return Err(EntityBuilderError::UpdatedBeforeCreation {
+            return Err(ItemBuilderError::UpdatedBeforeCreation {
                 updated_at: self.updated_at,
                 created_at: self.created_at,
             });
         }
 
-        Ok(Entity {
+        Ok(Item {
             id: self.id,
             name,
             location,
@@ -189,7 +162,7 @@ mod tests {
 
     #[test]
     fn default_builder() {
-        let builder = EntityBuilder::default();
+        let builder = ItemBuilder::default();
         println!("{builder:#?}");
 
         assert_eq!(builder.location, None);
@@ -199,83 +172,81 @@ mod tests {
     #[test]
     fn location_not_set() {
         let name = Word().fake();
-        let builder = EntityBuilder::default();
+        let builder = ItemBuilder::default();
         println!("{builder:#?}");
         let builder_err = builder.name(name).build();
         println!("{builder_err:#?}");
 
-        assert_eq!(builder_err, Err(EntityBuilderError::LocationNotSet));
+        assert_eq!(builder_err, Err(ItemBuilderError::LocationNotSet));
     }
 
     #[test]
     fn name_not_set() {
         let location = CityName().fake();
-        let builder = EntityBuilder::default();
+        let builder = ItemBuilder::default();
         println!("{builder:#?}");
         let builder_err = builder.location(location).build();
         println!("{builder_err:#?}");
 
-        assert_eq!(builder_err, Err(EntityBuilderError::NameNotSet));
+        assert_eq!(builder_err, Err(ItemBuilderError::NameNotSet));
     }
 
     #[test]
     fn empty_location() {
-        let builder = EntityBuilder::default();
+        let builder = ItemBuilder::default();
         let name = Word().fake();
         println!("{builder:#?}");
         let builder_err = builder.location(String::new()).name(name).build();
         println!("{builder_err:#?}");
 
-        assert_eq!(builder_err, Err(EntityBuilderError::LocationIsEmpty));
+        assert_eq!(builder_err, Err(ItemBuilderError::LocationIsEmpty));
     }
 
     #[test]
     fn empty_name() {
-        let builder = EntityBuilder::default();
+        let builder = ItemBuilder::default();
         let location = CityName().fake();
         println!("{builder:#?}");
         let builder_err = builder.name(String::new()).location(location).build();
         println!("{builder_err:#?}");
 
-        assert_eq!(builder_err, Err(EntityBuilderError::NameIsEmpty));
+        assert_eq!(builder_err, Err(ItemBuilderError::NameIsEmpty));
     }
 
     #[test]
     fn long_location() {
-        let location: String = ((EntityBuilder::MAX_LOCATION_LENGTH + 1)
-            ..(EntityBuilder::MAX_LOCATION_LENGTH * 2))
-            .fake();
+        let location: String =
+            ((ItemBuilder::MAX_LOCATION_LENGTH + 1)..(ItemBuilder::MAX_LOCATION_LENGTH * 2)).fake();
         let name = Word().fake();
-        let builder = EntityBuilder::default();
+        let builder = ItemBuilder::default();
         println!("{builder:#?}");
         let builder_err = builder.location(location.clone()).name(name).build();
         println!("{builder_err:#?}");
 
         assert_eq!(
             builder_err,
-            Err(EntityBuilderError::LocationTooLong { location })
+            Err(ItemBuilderError::LocationTooLong { location })
         );
     }
 
     #[test]
     fn long_name() {
-        let name: String = ((EntityBuilder::MAX_LOCATION_LENGTH + 1)
-            ..(EntityBuilder::MAX_LOCATION_LENGTH * 2))
-            .fake();
+        let name: String =
+            ((ItemBuilder::MAX_LOCATION_LENGTH + 1)..(ItemBuilder::MAX_LOCATION_LENGTH * 2)).fake();
         let location = CityName().fake();
-        let builder = EntityBuilder::default();
+        let builder = ItemBuilder::default();
         println!("{builder:#?}");
         let builder_err = builder.name(name.clone()).location(location).build();
         println!("{builder_err:#?}");
 
-        assert_eq!(builder_err, Err(EntityBuilderError::NameTooLong { name }));
+        assert_eq!(builder_err, Err(ItemBuilderError::NameTooLong { name }));
     }
 
     #[test]
     fn id_and_time_not_set() {
         let location = CityName().fake();
         let name = Word().fake();
-        let builder = EntityBuilder::default();
+        let builder = ItemBuilder::default();
         println!("{builder:#?}");
         let builder_ok = builder.name(name).location(location).build();
         println!("{builder_ok:#?}");
@@ -290,7 +261,7 @@ mod tests {
         let updated_at = Utc::now().naive_utc();
         sleep(Duration::from_secs(1));
         let created_at = Utc::now().naive_utc();
-        let builder = EntityBuilder::default();
+        let builder = ItemBuilder::default();
         println!("{builder:#?}");
         let builder_err = builder
             .name(name)
@@ -302,7 +273,7 @@ mod tests {
 
         assert_eq!(
             builder_err,
-            Err(EntityBuilderError::UpdatedBeforeCreation {
+            Err(ItemBuilderError::UpdatedBeforeCreation {
                 updated_at,
                 created_at
             })
@@ -317,7 +288,7 @@ mod tests {
         sleep(Duration::from_secs(1));
         let updated_at = Utc::now().naive_utc();
         let id = UUIDv4.fake();
-        let builder = EntityBuilder::default();
+        let builder = ItemBuilder::default();
         println!("{builder:#?}");
         let entity = builder
             .id(id)

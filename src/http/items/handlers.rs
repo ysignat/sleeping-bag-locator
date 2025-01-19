@@ -7,87 +7,77 @@ use axum::{
 };
 use uuid::Uuid;
 
-use super::{
-    errors::AppError,
-    AppState,
-    Entity,
-    Limit,
-    MutableParams,
-    Page,
-    PaginationParams,
-    Params,
+use super::dtos::{HttpCreateItemParams, HttpItem, HttpUpdateItemParams};
+use crate::{
+    dao::Pagination,
+    http::{
+        common::{AppError, HttpPaginationParams},
+        AppState,
+    },
 };
 
 #[debug_handler]
-pub async fn list(
-    Query(pagination_params): Query<PaginationParams>,
+pub async fn list_items(
+    Query(pagination_params): Query<HttpPaginationParams>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, AppError> {
-    let pagination = pagination_params.clone();
-    let mut headers = HeaderMap::new();
-
-    if let Some(page) = pagination_params.page {
-        headers.insert(Page::HEADER, page.try_into()?);
-    }
-
-    if let Some(limit) = pagination_params.limit {
-        headers.insert(Limit::HEADER, limit.try_into()?);
-    }
-
-    let result: Vec<Entity> = state
-        .list(pagination.try_into()?)
+    let pagination: Pagination = pagination_params.try_into()?;
+    let response_headers: HeaderMap = pagination.clone().try_into()?;
+    let result: Vec<HttpItem> = state
+        .items
+        .list(pagination)
         .await?
         .into_iter()
         .map(Into::into)
         .collect();
 
-    Ok((StatusCode::OK, headers, Json(result)))
+    Ok((StatusCode::OK, response_headers, Json(result)))
 }
 
 #[debug_handler]
-pub async fn create(
+pub async fn create_item(
     State(state): State<AppState>,
-    Json(params): Json<Params>,
+    Json(params): Json<HttpCreateItemParams>,
 ) -> Result<impl IntoResponse, AppError> {
-    let result: Entity = state.create(params.try_into()?).await?.into();
+    let result: HttpItem = state.items.create(params.try_into()?).await?.into();
 
     Ok((StatusCode::CREATED, Json(result)))
 }
 
 #[debug_handler]
-pub async fn get(
+pub async fn get_item(
     Path(id): Path<Uuid>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, AppError> {
-    let result: Entity = state.get(id).await?.into();
+    let result: HttpItem = state.items.get(id).await?.into();
 
     Ok((StatusCode::OK, Json(result)))
 }
 
 #[debug_handler]
-pub async fn update(
+pub async fn update_item(
     Path(id): Path<Uuid>,
     State(state): State<AppState>,
-    Json(mutable_params): Json<MutableParams>,
+    Json(params): Json<HttpUpdateItemParams>,
 ) -> Result<impl IntoResponse, AppError> {
-    let result: Entity = state.update(id, mutable_params.try_into()?).await?.into();
+    let result: HttpItem = state.items.update(id, params.try_into()?).await?.into();
 
     Ok((StatusCode::OK, Json(result)))
 }
 
 #[debug_handler]
-pub async fn delete(
+pub async fn delete_item(
     Path(id): Path<Uuid>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, AppError> {
-    state.delete(id).await?;
+    state.items.delete(id).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
 
 #[debug_handler]
 pub async fn health(State(state): State<AppState>) -> Result<impl IntoResponse, AppError> {
-    state.health().await?;
+    state.items.health().await?;
 
     Ok(StatusCode::OK)
 }

@@ -7,40 +7,43 @@ use axum::async_trait;
 use uuid::Uuid;
 
 use crate::dao::{
-    entity::Entity,
-    pagination::Pagination,
-    params::{MutableParams, Params},
-    DaoCreateError,
-    DaoDeleteError,
-    DaoGetError,
-    DaoHealthError,
-    DaoListError,
-    DaoTrait,
-    DaoUpdateError,
+    common::Pagination,
+    items::{
+        CreateItemError,
+        CreateItemParams,
+        DeleteItemError,
+        GetItemError,
+        Item,
+        ItemsDao,
+        ItemsHealthError,
+        ListItemsError,
+        UpdateItemError,
+        UpdateItemParams,
+    },
 };
 
 #[derive(Clone)]
-pub struct HashMapDao(Arc<RwLock<HashMap<Uuid, Entity>>>);
+pub struct ItemsHashMapDao(Arc<RwLock<HashMap<Uuid, Item>>>);
 
-impl HashMapDao {
+impl ItemsHashMapDao {
     pub fn new() -> Self {
-        HashMapDao(Arc::new(RwLock::new(HashMap::new())))
+        ItemsHashMapDao(Arc::new(RwLock::new(HashMap::new())))
     }
 
-    fn read(&self) -> RwLockReadGuard<HashMap<Uuid, Entity>> {
+    fn read(&self) -> RwLockReadGuard<HashMap<Uuid, Item>> {
         self.0.read().unwrap()
     }
 
-    fn write(&self) -> RwLockWriteGuard<HashMap<Uuid, Entity>> {
+    fn write(&self) -> RwLockWriteGuard<HashMap<Uuid, Item>> {
         self.0.write().unwrap()
     }
 }
 
 #[async_trait]
-impl DaoTrait for HashMapDao {
-    async fn list(&self, pagination: Pagination) -> Result<Vec<Entity>, DaoListError> {
+impl ItemsDao for ItemsHashMapDao {
+    async fn list(&self, pagination: Pagination) -> Result<Vec<Item>, ListItemsError> {
         let data = self.read();
-        let mut vec: Vec<&Entity> = data.values().collect();
+        let mut vec: Vec<&Item> = data.values().collect();
 
         vec.sort_by_key(|x| x.updated_at());
 
@@ -52,52 +55,48 @@ impl DaoTrait for HashMapDao {
             .collect())
     }
 
-    async fn create(&self, params: Params) -> Result<Entity, DaoCreateError> {
+    async fn create(&self, params: CreateItemParams) -> Result<Item, CreateItemError> {
         let mut data = self.write();
-        let entity: Entity = params.try_into().or(Err(DaoCreateError::InvalidParams))?;
+        let entity: Item = params.try_into().or(Err(CreateItemError::InvalidParams))?;
 
         if let Entry::Vacant(e) = data.entry(entity.id()) {
             Ok(e.insert(entity).to_owned())
         } else {
-            Err(DaoCreateError::AlreadyExists { id: entity.id() }) // Could only happen on a UUID collision
+            Err(CreateItemError::AlreadyExists { id: entity.id() }) // Could only happen on a UUID collision
         }
     }
 
-    async fn get(&self, id: Uuid) -> Result<Entity, DaoGetError> {
+    async fn get(&self, id: Uuid) -> Result<Item, GetItemError> {
         let data = self.read();
         Ok(data
             .get(&id)
             .cloned()
-            .ok_or(DaoGetError::NoSuchEntity { id })?)
+            .ok_or(GetItemError::NoSuchEntity { id })?)
     }
 
-    async fn update(
-        &self,
-        id: Uuid,
-        mutable_params: MutableParams,
-    ) -> Result<Entity, DaoUpdateError> {
+    async fn update(&self, id: Uuid, params: UpdateItemParams) -> Result<Item, UpdateItemError> {
         let mut data = self.write();
         if let Some(entity) = data.get(&id) {
             let updated = entity
                 .clone()
-                .try_mutate(&mutable_params)
-                .or(Err(DaoUpdateError::InvalidParams))?;
+                .try_update(&params)
+                .or(Err(UpdateItemError::InvalidParams))?;
 
             let _ = data.insert(id, updated.clone());
             Ok(updated)
         } else {
-            Err(DaoUpdateError::NoSuchEntity { id })
+            Err(UpdateItemError::NoSuchEntity { id })
         }
     }
 
-    async fn delete(&self, id: Uuid) -> Result<(), DaoDeleteError> {
+    async fn delete(&self, id: Uuid) -> Result<(), DeleteItemError> {
         let mut data = self.write();
         data.remove(&id)
-            .ok_or(DaoDeleteError::NoSuchEntity { id })
+            .ok_or(DeleteItemError::NoSuchEntity { id })
             .and(Ok(()))
     }
 
-    async fn health(&self) -> Result<(), DaoHealthError> {
+    async fn health(&self) -> Result<(), ItemsHealthError> {
         Ok(())
     }
 }
@@ -110,8 +109,8 @@ mod tests {
 
     #[tokio::test]
     async fn create() {
-        let dao = HashMapDao::new();
-        let params: Params = Faker.fake();
+        let dao = ItemsHashMapDao::new();
+        let params: CreateItemParams = Faker.fake();
         println!("{params:#?}");
         let entity = dao.create(params.clone()).await.unwrap();
         println!("{entity:#?}");
@@ -123,8 +122,8 @@ mod tests {
 
     #[tokio::test]
     async fn get() {
-        let dao = HashMapDao::new();
-        let params: Params = Faker.fake();
+        let dao = ItemsHashMapDao::new();
+        let params: CreateItemParams = Faker.fake();
         println!("{params:#?}");
         let entity = dao.create(params.clone()).await.unwrap();
         println!("{entity:#?}");
@@ -136,19 +135,19 @@ mod tests {
 
     #[tokio::test]
     async fn get_non_existent() {
-        let dao = HashMapDao::new();
+        let dao = ItemsHashMapDao::new();
         let id = Faker.fake();
         println!("{id:#?}");
         let result = dao.get(id).await;
         println!("{result:#?}");
 
-        assert_eq!(result, Err(DaoGetError::NoSuchEntity { id }));
+        assert_eq!(result, Err(GetItemError::NoSuchEntity { id }));
     }
 
     #[tokio::test]
     async fn delete() {
-        let dao = HashMapDao::new();
-        let params: Params = Faker.fake();
+        let dao = ItemsHashMapDao::new();
+        let params: CreateItemParams = Faker.fake();
         println!("{params:#?}");
         let entity = dao.create(params.clone()).await.unwrap();
         println!("{entity:#?}");
@@ -157,33 +156,33 @@ mod tests {
 
     #[tokio::test]
     async fn delete_non_existent() {
-        let dao = HashMapDao::new();
+        let dao = ItemsHashMapDao::new();
         let id = Faker.fake();
         println!("{id:#?}");
         let result = dao.delete(id).await;
         println!("{result:#?}");
 
-        assert_eq!(result, Err(DaoDeleteError::NoSuchEntity { id }));
+        assert_eq!(result, Err(DeleteItemError::NoSuchEntity { id }));
     }
 
     #[tokio::test]
     async fn update() {
-        let dao = HashMapDao::new();
-        let params: Params = Faker.fake();
-        println!("{params:#?}");
-        let entity = dao.create(params.clone()).await.unwrap();
+        let dao = ItemsHashMapDao::new();
+        let create_params: CreateItemParams = Faker.fake();
+        println!("{create_params:#?}");
+        let entity = dao.create(create_params.clone()).await.unwrap();
         println!("{entity:#?}");
-        let mutable_params: MutableParams = Faker.fake();
-        println!("{mutable_params:#?}");
+        let update_params: UpdateItemParams = Faker.fake();
+        println!("{update_params:#?}");
 
         let update_result = dao
-            .update(entity.id(), mutable_params.clone())
+            .update(entity.id(), update_params.clone())
             .await
             .unwrap();
         println!("{update_result:#?}");
 
-        assert_eq!(update_result.name(), mutable_params.name());
-        assert_eq!(update_result.location(), mutable_params.location());
+        assert_eq!(update_result.name(), update_params.name());
+        assert_eq!(update_result.location(), update_params.location());
         assert_eq!(update_result.created_at(), entity.created_at());
         assert!(update_result.updated_at().gt(&entity.updated_at()));
 
@@ -195,20 +194,20 @@ mod tests {
 
     #[tokio::test]
     async fn update_non_existent() {
-        let dao = HashMapDao::new();
+        let dao = ItemsHashMapDao::new();
         let id = Faker.fake();
         println!("{id:#?}");
-        let mutable_params = Faker.fake();
-        println!("{mutable_params:#?}");
-        let result = dao.update(id, mutable_params).await;
+        let params = Faker.fake();
+        println!("{params:#?}");
+        let result = dao.update(id, params).await;
         println!("{result:#?}");
 
-        assert_eq!(result, Err(DaoUpdateError::NoSuchEntity { id }));
+        assert_eq!(result, Err(UpdateItemError::NoSuchEntity { id }));
     }
 
     #[tokio::test]
     async fn list_empty() {
-        let dao = HashMapDao::new();
+        let dao = ItemsHashMapDao::new();
         let pagination = Faker.fake();
         println!("{pagination:#?}");
 
@@ -218,7 +217,7 @@ mod tests {
 
     #[tokio::test]
     async fn list() {
-        let dao = HashMapDao::new();
+        let dao = ItemsHashMapDao::new();
         let pagination: Pagination = Faker.fake();
         println!("{pagination:#?}");
 
