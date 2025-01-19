@@ -3,7 +3,6 @@ use std::{
     sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard},
 };
 
-use anyhow::{anyhow, Context, Result};
 use axum::async_trait;
 use uuid::Uuid;
 
@@ -11,7 +10,13 @@ use crate::dao::{
     entity::Entity,
     pagination::Pagination,
     params::{MutableParams, Params},
+    DaoCreateError,
+    DaoDeleteError,
+    DaoGetError,
+    DaoHealthError,
+    DaoListError,
     DaoTrait,
+    DaoUpdateError,
 };
 
 #[derive(Clone)]
@@ -33,7 +38,7 @@ impl HashMapDao {
 
 #[async_trait]
 impl DaoTrait for HashMapDao {
-    async fn list(&self, pagination: Pagination) -> Result<Vec<Entity>> {
+    async fn list(&self, pagination: Pagination) -> Result<Vec<Entity>, DaoListError> {
         let data = self.read();
         let mut vec: Vec<&Entity> = data.values().collect();
 
@@ -47,45 +52,52 @@ impl DaoTrait for HashMapDao {
             .collect())
     }
 
-    async fn create(&self, params: Params) -> Result<Entity> {
+    async fn create(&self, params: Params) -> Result<Entity, DaoCreateError> {
         let mut data = self.write();
-        let entity: Entity = params
-            .try_into()
-            .or(Err(anyhow!("Cannot create entity from params")))?;
+        let entity: Entity = params.try_into().or(Err(DaoCreateError::InvalidParams))?;
 
         if let Entry::Vacant(e) = data.entry(entity.id()) {
             Ok(e.insert(entity).to_owned())
         } else {
-            Err(anyhow!("Entity with such id already exists in our records")) // Could only happen on a UUID collision
+            Err(DaoCreateError::AlreadyExists { id: entity.id() }) // Could only happen on a UUID collision
         }
     }
 
-    async fn get(&self, id: Uuid) -> Result<Entity> {
+    async fn get(&self, id: Uuid) -> Result<Entity, DaoGetError> {
         let data = self.read();
-        data.get(&id).cloned().context("No Such Entity")
+        Ok(data
+            .get(&id)
+            .cloned()
+            .ok_or(DaoGetError::NoSuchEntity { id })?)
     }
 
-    async fn update(&self, id: Uuid, mutable_params: MutableParams) -> Result<Entity> {
+    async fn update(
+        &self,
+        id: Uuid,
+        mutable_params: MutableParams,
+    ) -> Result<Entity, DaoUpdateError> {
         let mut data = self.write();
         if let Some(entity) = data.get(&id) {
             let updated = entity
                 .clone()
                 .try_mutate(&mutable_params)
-                .or(Err(anyhow!("Cannot mutate entity with such mutation")))?;
+                .or(Err(DaoUpdateError::InvalidParams))?;
 
             let _ = data.insert(id, updated.clone());
             Ok(updated)
         } else {
-            Err(anyhow!("No Such Entity"))
+            Err(DaoUpdateError::NoSuchEntity { id })
         }
     }
 
-    async fn delete(&self, id: Uuid) -> Result<()> {
+    async fn delete(&self, id: Uuid) -> Result<(), DaoDeleteError> {
         let mut data = self.write();
-        data.remove(&id).context("No Such Entity").and(Ok(()))
+        data.remove(&id)
+            .ok_or(DaoDeleteError::NoSuchEntity { id })
+            .and(Ok(()))
     }
 
-    async fn health(&self) -> anyhow::Result<()> {
+    async fn health(&self) -> Result<(), DaoHealthError> {
         Ok(())
     }
 }
@@ -130,7 +142,7 @@ mod tests {
         let result = dao.get(id).await;
         println!("{result:#?}");
 
-        assert!(result.is_err());
+        assert_eq!(result, Err(DaoGetError::NoSuchEntity { id }));
     }
 
     #[tokio::test]
@@ -151,7 +163,7 @@ mod tests {
         let result = dao.delete(id).await;
         println!("{result:#?}");
 
-        assert!(result.is_err());
+        assert_eq!(result, Err(DaoDeleteError::NoSuchEntity { id }));
     }
 
     #[tokio::test]
@@ -191,7 +203,7 @@ mod tests {
         let result = dao.update(id, mutable_params).await;
         println!("{result:#?}");
 
-        assert!(result.is_err());
+        assert_eq!(result, Err(DaoUpdateError::NoSuchEntity { id }));
     }
 
     #[tokio::test]

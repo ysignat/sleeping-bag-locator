@@ -1,6 +1,6 @@
-use anyhow::{anyhow, Result};
 #[cfg(test)]
 use fake::{faker::address::en::CityName, faker::lorem::en::Word, Dummy};
+use thiserror::Error;
 
 #[cfg_attr(test, derive(Dummy, Clone, Debug, PartialEq, Eq))]
 pub struct MutableParams {
@@ -27,6 +27,15 @@ pub struct MutableParamsBuilder {
     location: Option<String>,
 }
 
+#[derive(Error, Debug)]
+#[cfg_attr(test, derive(PartialEq))]
+pub enum MutableParamsBuilderError {
+    #[error("Name is not set")]
+    NameNotSet,
+    #[error("Location is not set")]
+    LocationNotSet,
+}
+
 impl MutableParamsBuilder {
     pub fn new() -> Self {
         Self::default()
@@ -42,15 +51,18 @@ impl MutableParamsBuilder {
         self
     }
 
-    pub fn build(self) -> Result<MutableParams> {
+    pub fn build(self) -> Result<MutableParams, MutableParamsBuilderError> {
         Ok(MutableParams {
-            name: self.name.ok_or(anyhow!("Name is not set"))?,
-            location: self.location.ok_or(anyhow!("Location is not set"))?,
+            name: self.name.ok_or(MutableParamsBuilderError::NameNotSet)?,
+            location: self
+                .location
+                .ok_or(MutableParamsBuilderError::LocationNotSet)?,
         })
     }
 }
 
-#[cfg_attr(test, derive(Dummy, Clone, Debug, PartialEq, Eq))]
+#[cfg_attr(test, derive(Dummy, Clone, PartialEq, Eq))]
+#[derive(Debug)]
 pub struct Params {
     #[cfg_attr(test, dummy(faker = "Word()"))]
     name: String,
@@ -75,6 +87,15 @@ pub struct ParamsBuilder {
     location: Option<String>,
 }
 
+#[derive(Error, Debug)]
+#[cfg_attr(test, derive(PartialEq))]
+pub enum ParamsBuilderError {
+    #[error("Name is not set")]
+    NameNotSet,
+    #[error("Location is not set")]
+    LocationNotSet,
+}
+
 impl ParamsBuilder {
     pub fn new() -> Self {
         Self::default()
@@ -90,10 +111,10 @@ impl ParamsBuilder {
         self
     }
 
-    pub fn build(self) -> Result<Params> {
+    pub fn build(self) -> Result<Params, ParamsBuilderError> {
         Ok(Params {
-            name: self.name.ok_or(anyhow!("Name is not set"))?,
-            location: self.location.ok_or(anyhow!("Location is not set"))?,
+            name: self.name.ok_or(ParamsBuilderError::NameNotSet)?,
+            location: self.location.ok_or(ParamsBuilderError::LocationNotSet)?,
         })
     }
 }
@@ -112,7 +133,7 @@ mod tests_params {
         let builder_err = builder.location(location).build();
         println!("{builder_err:#?}");
 
-        assert!(builder_err.is_err());
+        assert_eq!(builder_err, Err(ParamsBuilderError::NameNotSet));
     }
 
     #[test]
@@ -123,7 +144,7 @@ mod tests_params {
         let builder_err = builder.name(name).build();
         println!("{builder_err:#?}");
 
-        assert!(builder_err.is_err());
+        assert_eq!(builder_err, Err(ParamsBuilderError::LocationNotSet));
     }
 
     #[test]
@@ -157,7 +178,7 @@ mod tests_mutable_params {
         let builder_err = builder.location(location).build();
         println!("{builder_err:#?}");
 
-        assert!(builder_err.is_err());
+        assert_eq!(builder_err, Err(MutableParamsBuilderError::NameNotSet));
     }
 
     #[test]
@@ -168,7 +189,7 @@ mod tests_mutable_params {
         let builder_err = builder.name(name).build();
         println!("{builder_err:#?}");
 
-        assert!(builder_err.is_err());
+        assert_eq!(builder_err, Err(MutableParamsBuilderError::LocationNotSet));
     }
 
     #[test]

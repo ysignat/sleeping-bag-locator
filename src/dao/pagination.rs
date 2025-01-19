@@ -1,6 +1,6 @@
-use anyhow::{anyhow, Result};
 #[cfg(test)]
 use fake::Dummy;
+use thiserror::Error;
 
 #[cfg_attr(test, derive(Debug, Dummy, PartialEq, Eq))]
 pub struct Pagination {
@@ -25,6 +25,15 @@ impl Pagination {
 pub struct PaginationBuilder {
     page: usize,
     limit: usize,
+}
+
+#[derive(Error, Debug)]
+#[cfg_attr(test, derive(PartialEq))]
+pub enum PaginationBuilderError {
+    #[error("Page number must be greater than zero")]
+    PageIsZero,
+    #[error("Entites limit must be greater than zero")]
+    LimitIsZero,
 }
 
 impl Default for PaginationBuilder {
@@ -54,13 +63,13 @@ impl PaginationBuilder {
         self
     }
 
-    pub fn build(self) -> Result<Pagination> {
+    pub fn build(self) -> Result<Pagination, PaginationBuilderError> {
         if self.page.eq(&0) {
-            return Err(anyhow!("Page number must be greater than zero"));
+            return Err(PaginationBuilderError::PageIsZero);
         }
 
         if self.limit.eq(&0) {
-            return Err(anyhow!("Entites limit must be greater than zero"));
+            return Err(PaginationBuilderError::LimitIsZero);
         }
 
         Ok(Pagination {
@@ -97,7 +106,7 @@ mod tests {
         let builder_err = PaginationBuilder::new().page(0).build();
         println!("{builder_err:#?}");
 
-        assert!(builder_err.is_err());
+        assert_eq!(builder_err, Err(PaginationBuilderError::PageIsZero));
     }
 
     #[test]
@@ -105,7 +114,7 @@ mod tests {
         let builder_err = PaginationBuilder::new().limit(0).build();
         println!("{builder_err:#?}");
 
-        assert!(builder_err.is_err());
+        assert_eq!(builder_err, Err(PaginationBuilderError::LimitIsZero));
     }
 
     #[test]
