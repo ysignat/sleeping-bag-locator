@@ -2,7 +2,6 @@ set export := true
 set dotenv-load := true
 
 CONTAINER_NAME := 'api'
-ALPINE_VERSION := '3.20'
 YC_PROFILE_NAME := 'sleeping-bag-locator-terraform'
 AWS_REGION := 'ru-central1'
 AWS_ACCESS_KEY_ID := env('AWS_ACCESS_KEY')
@@ -23,7 +22,7 @@ start:
       --quiet \
       --file dev.dockerfile \
       --build-arg "RUST_VERSION=${RUST_VERSION}" \
-      --build-arg "ALPINE_VERSION=${ALPINE_VERSION}" \
+      --build-arg "ALPINE_VERSION=$(gh variable get ALPINE_VERSION)" \
       .
   )"
   docker run \
