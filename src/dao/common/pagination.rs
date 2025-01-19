@@ -3,6 +3,7 @@ use fake::Dummy;
 use thiserror::Error;
 
 #[cfg_attr(test, derive(Debug, Dummy, PartialEq, Eq))]
+#[derive(Clone)]
 pub struct Pagination {
     #[cfg_attr(test, dummy(faker = "1..10"))]
     page: usize,
