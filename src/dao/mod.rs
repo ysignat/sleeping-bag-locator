@@ -1,8 +1,15 @@
 use axum::async_trait;
 pub use entity::Entity;
 pub use impls::{HashMapDao, MockedDao};
-pub use pagination::{Pagination, PaginationBuilder};
-pub use params::{MutableParams, MutableParamsBuilder, Params, ParamsBuilder};
+pub use pagination::{Pagination, PaginationBuilder, PaginationBuilderError};
+pub use params::{
+    MutableParams,
+    MutableParamsBuilder,
+    MutableParamsBuilderError,
+    Params,
+    ParamsBuilder,
+    ParamsBuilderError,
+};
 use thiserror::Error;
 use uuid::Uuid;
 
