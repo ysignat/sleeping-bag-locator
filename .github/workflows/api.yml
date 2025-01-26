@@ -143,7 +143,6 @@ jobs:
         uses: docker/build-push-action@v6
         env:
           SRC_BINARY_PATH: bin/${{ vars.API_ARTIFACT_NAME }}
-          ALPINE_VERSION: "3.20"
         with:
           push: true
           file: ${{ github.workspace }}/Dockerfile
@@ -152,7 +151,7 @@ jobs:
             ${{ env.YANDEX_CLOUD_REGISTRY_TAG }}
           build-args: |-
             SRC_BINARY_PATH=${{ env.SRC_BINARY_PATH }}
-            ALPINE_VERSION=${{ env.ALPINE_VERSION }}
+            ALPINE_VERSION=${{ vars.ALPINE_VERSION }}
           context: ${{ env.BUILD_ROOT }}
 
   plan:
