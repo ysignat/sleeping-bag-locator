@@ -3,80 +3,43 @@ resource "github_actions_secret" "yandex_cloud_registry_key" {
   secret_name = "YANDEX_CLOUD_REGISTRY_KEY"
   plaintext_value = jsonencode(
     {
-      id                 = yandex_iam_service_account_key.container_registry_key.id
-      service_account_id = yandex_iam_service_account_key.container_registry_key.service_account_id
-      created_at         = yandex_iam_service_account_key.container_registry_key.created_at
-      key_algorithm      = yandex_iam_service_account_key.container_registry_key.key_algorithm
-      public_key         = yandex_iam_service_account_key.container_registry_key.public_key
-      private_key        = yandex_iam_service_account_key.container_registry_key.private_key
+      id                 = yandex_iam_service_account_key.build.id
+      service_account_id = yandex_iam_service_account_key.build.service_account_id
+      created_at         = yandex_iam_service_account_key.build.created_at
+      key_algorithm      = yandex_iam_service_account_key.build.key_algorithm
+      public_key         = yandex_iam_service_account_key.build.public_key
+      private_key        = yandex_iam_service_account_key.build.private_key
     }
   )
 }
 
-resource "github_actions_variable" "yandex_cloud_registry_id" {
+resource "github_actions_variable" "default" {
+  for_each = {
+    YANDEX_CLOUD_REGISTRY_ID               = yandex_container_registry.default.id
+    YANDEX_CLOUD_DEPLOY_SERVICE_ACCOUNT_ID = yandex_iam_service_account.deploy.id
+    API_ARTIFACT_NAME                      = "api"
+    YANDEX_CLOUD_REGISTRY                  = "cr.yandex"
+    GH_REGISTRY                            = "ghcr.io"
+    TERRAFORM_VERSION                      = "~> 1.10.0"
+    ALPINE_VERSION                         = "3.20"
+    LOCKBOX_SECRET_ID                      = "e6qeoqvd88dcpf044n5i"
+    LOCKBOX_SECRET_VERSION                 = "e6qat5fto5ltsdtlbts1"
+  }
   repository    = local.repository
-  variable_name = "YANDEX_CLOUD_REGISTRY_ID"
-  value         = yandex_container_registry.default.id
-}
-
-resource "github_actions_variable" "yandex_cloud_deploy_service_acount_id" {
-  repository    = local.repository
-  variable_name = "YANDEX_CLOUD_DEPLOY_SERVICE_ACCOUNT_ID"
-  value         = yandex_iam_service_account.deploy.id
-}
-
-resource "github_actions_variable" "api_artifact_name" {
-  repository    = local.repository
-  variable_name = "API_ARTIFACT_NAME"
-  value         = "api"
-}
-
-resource "github_actions_variable" "yandex_cloud_registry" {
-  repository    = local.repository
-  variable_name = "YANDEX_CLOUD_REGISTRY"
-  value         = "cr.yandex"
-}
-
-resource "github_actions_variable" "gh_registry" {
-  repository    = local.repository
-  variable_name = "GH_REGISTRY"
-  value         = "ghcr.io"
-}
-
-resource "github_actions_variable" "terraform_version" {
-  repository    = local.repository
-  variable_name = "TERRAFORM_VERSION"
-  value         = "~> 1.10.0"
-}
-
-resource "github_actions_variable" "alpine_version" {
-  repository    = local.repository
-  variable_name = "ALPINE_VERSION"
-  value         = "3.20"
+  variable_name = each.key
+  value         = each.value
 }
 
 data "github_user" "ysignat" {
   username = "ysignat"
 }
 
-resource "github_repository_environment" "infra_review" {
-  environment         = "infra-review"
-  repository          = local.repository
-  prevent_self_review = false
-  can_admins_bypass   = true
-  reviewers {
-    users = [
-      data.github_user.ysignat.id,
-    ]
+resource "github_repository_environment" "default" {
+  for_each = {
+    infra-review = {}
+    api-review   = {}
   }
-  deployment_branch_policy {
-    protected_branches     = false
-    custom_branch_policies = true
-  }
-}
-
-resource "github_repository_environment" "api_review" {
-  environment         = "api-review"
+  environment         = each.key
   repository          = local.repository
   prevent_self_review = false
   can_admins_bypass   = true
