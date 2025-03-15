@@ -72,7 +72,7 @@ async fn main() {
 
     let session_store = MemoryStore::new();
 
-    let state: AppState = match args.runtime.dao_type {
+    let state = match args.runtime.dao_type {
         DaoType::Mocked => {
             info!(target : TRACING_STARTUP_TARGET, "Using MockedDao");
             AppState {

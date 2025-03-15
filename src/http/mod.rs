@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use async_session::MemoryStore;
 pub use authentication::{auth_callback, login, logout};
 pub use items::{create_item, delete_item, get_item, health, list_items, update_item};
 use oauth2::{
@@ -36,8 +35,8 @@ type OauthClient = Client<
 >;
 
 #[derive(Clone)]
-pub struct AppState {
+pub struct AppState<T> {
     pub items: Arc<dyn ItemsDao + Send + Sync>,
-    pub session_store: MemoryStore,
+    pub session_store: T,
     pub oauth: OauthClient,
 }
