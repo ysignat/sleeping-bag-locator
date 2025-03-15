@@ -1,6 +1,5 @@
 use async_session::{Session, SessionStore};
 use axum::{
-    debug_handler,
     extract::State,
     http::StatusCode,
     response::{IntoResponse, Redirect},
@@ -43,11 +42,13 @@ impl From<LoginError> for AppError {
     }
 }
 
-#[debug_handler]
-pub async fn login(
+pub async fn login<T>(
     cookie_jar: CookieJar,
-    State(state): State<AppState>,
-) -> Result<impl IntoResponse, AppError> {
+    State(state): State<AppState<T>>,
+) -> Result<impl IntoResponse, AppError>
+where
+    T: SessionStore,
+{
     // Construct authentication URL and CSRF token
     let (auth_uri, csrf_token) = state
         .oauth

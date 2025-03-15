@@ -38,6 +38,7 @@ start:
     --env "PORT=${PORT}" \
     --env "OAUTH_CLIENT_ID=${OAUTH_CLIENT_ID}" \
     --env "OAUTH_CLIENT_SECRET=${OAUTH_CLIENT_SECRET}" \
+    --env "LOG_LEVEL=TRACE" \
     "${TAG}"
 
 stop:

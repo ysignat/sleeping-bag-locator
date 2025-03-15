@@ -1,7 +1,7 @@
-use async_session::{MemoryStore, SessionStore};
+use async_session::SessionStore;
 use axum::{
     async_trait,
-    extract::{FromRef, FromRequestParts},
+    extract::FromRequestParts,
     http::request::Parts,
     response::{IntoResponse, Redirect, Response},
     RequestPartsExt,
@@ -10,6 +10,7 @@ use axum_extra::extract::CookieJar;
 use serde::{Deserialize, Serialize};
 
 use super::{COOKIE_NAME, USER_INFO};
+use crate::http::AppState;
 
 const AUTH_PATH: &str = "/auth";
 
@@ -27,15 +28,17 @@ pub struct UserInfo {
 }
 
 #[async_trait]
-impl<S> FromRequestParts<S> for UserInfo
+impl<T> FromRequestParts<AppState<T>> for UserInfo
 where
-    MemoryStore: FromRef<S>,
-    S: Send + Sync,
+    T: SessionStore,
 {
     type Rejection = AuthRedirect;
 
-    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        let store = MemoryStore::from_ref(state);
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState<T>,
+    ) -> Result<Self, Self::Rejection> {
+        let store = state.session_store.clone();
 
         let cookie_jar = parts.extract::<CookieJar>().await.unwrap(); // Unwrapping Infallible, it's OK
         let session_cookie = cookie_jar.get(COOKIE_NAME).ok_or(AuthRedirect)?;
