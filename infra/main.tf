@@ -30,4 +30,10 @@ terraform {
 
 locals {
   repository = "sleeping-bag-locator"
+  folder_id  = "b1gupci5t21aji0ah4f5"
+}
+
+provider "yandex" {
+  cloud_id  = "b1g92d8a7m2lbe44meuq"
+  folder_id = local.folder_id
 }

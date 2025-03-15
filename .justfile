@@ -6,6 +6,8 @@ YC_PROFILE_NAME := 'sleeping-bag-locator-terraform'
 AWS_REGION := 'ru-central1'
 AWS_ACCESS_KEY_ID := env('AWS_ACCESS_KEY')
 AWS_SECRET_ACCESS_KEY := env('AWS_SECRET_KEY')
+OAUTH_CLIENT_ID := env('OAUTH_CLIENT_ID')
+OAUTH_CLIENT_SECRET := env('OAUTH_CLIENT_SECRET')
 
 default:
   @just --list
@@ -34,6 +36,8 @@ start:
     --name "${CONTAINER_NAME}" \
     --env "HOST=0.0.0.0" \
     --env "PORT=${PORT}" \
+    --env "OAUTH_CLIENT_ID=${OAUTH_CLIENT_ID}" \
+    --env "OAUTH_CLIENT_SECRET=${OAUTH_CLIENT_SECRET}" \
     "${TAG}"
 
 stop:

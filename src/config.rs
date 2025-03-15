@@ -1,3 +1,4 @@
+#![allow(clippy::struct_field_names)]
 use std::net::{IpAddr, Ipv4Addr};
 
 use clap::{value_parser, Args, Parser, ValueEnum};
@@ -10,6 +11,8 @@ pub struct Config {
     pub runtime: Runtime,
     #[command(flatten)]
     pub logging: Logging,
+    #[command(flatten)]
+    pub authentication: Authentication,
 }
 
 #[derive(Args, Clone, Debug)]
@@ -43,4 +46,12 @@ pub enum DaoType {
     Mocked,
     #[default]
     HashMap,
+}
+
+#[derive(Args, Clone, Debug)]
+pub struct Authentication {
+    #[arg(long, env, default_value = "")]
+    pub oauth_client_id: String,
+    #[arg(long, env, default_value = "")]
+    pub oauth_client_secret: String,
 }

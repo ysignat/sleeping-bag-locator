@@ -172,6 +172,8 @@ jobs:
           YC_TOKEN: ${{ steps.issue-iam-token.outputs.token }}
           TF_VAR_image: ${{ env.YANDEX_CLOUD_REGISTRY_TAG }}
           TF_VAR_service_account_id: ${{ vars.YANDEX_CLOUD_DEPLOY_SERVICE_ACCOUNT_ID }}
+          TF_VAR_lockbox_secret_id: ${{ vars.LOCKBOX_SECRET_ID }}
+          TF_VAR_lockbox_secret_version: ${{ vars.LOCKBOX_SECRET_VERSION }}
         with:
           command: plan
           args: >-
@@ -200,6 +202,8 @@ jobs:
           YC_TOKEN: ${{ steps.issue-iam-token.outputs.token }}
           TF_VAR_image: ${{ env.YANDEX_CLOUD_REGISTRY_TAG }}
           TF_VAR_service_account_id: ${{ vars.YANDEX_CLOUD_DEPLOY_SERVICE_ACCOUNT_ID }}
+          TF_VAR_lockbox_secret_id: ${{ vars.LOCKBOX_SECRET_ID }}
+          TF_VAR_lockbox_secret_version: ${{ vars.LOCKBOX_SECRET_VERSION }}
         with:
           command: apply
           args: >-
