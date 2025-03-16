@@ -77,7 +77,7 @@ async fn main() {
             info!(target : TRACING_STARTUP_TARGET, "Using MockedDao");
             AppState {
                 items: Arc::new(ItemsMockedDao {}),
-                session_store,
+                session_store: Arc::new(session_store),
                 oauth,
             }
         }
@@ -85,7 +85,7 @@ async fn main() {
             info!(target : TRACING_STARTUP_TARGET, "Using HashMapDao");
             AppState {
                 items: Arc::new(ItemsHashMapDao::new()),
-                session_store,
+                session_store: Arc::new(session_store),
                 oauth,
             }
         }

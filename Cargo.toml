@@ -36,7 +36,9 @@ reqwest = { version = "0.12.14", features = [
     "rustls-tls",
 ], default-features = false }
 oauth2 = "5.0.0"
-async-session = "3.0.0"
+# async-session last tag (3.0.0) was created on Jun 1, 2021
+# Unfortunately, supertrait requirements were dropped after it, and dyn-dispatch requires this functionality
+async-session = { git = "https://github.com/http-rs/async-session.git", rev = "1c686d86dfc4fc2f1e05d8253583da1b22473f11" }
 axum-extra = { version = "0.9.6", features = ["cookie"] }
 
 [dev-dependencies]
