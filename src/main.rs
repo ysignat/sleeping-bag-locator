@@ -1,9 +1,10 @@
 use std::sync::Arc;
 
+use async_redis_session::RedisSessionStore;
 use async_session::MemoryStore;
 use axum::{routing::get, Router};
 use clap::Parser;
-use config::{Config, DaoType, LogFormat};
+use config::{Config, DaoType, LogFormat, SessionStoreType};
 use dao::{ItemsHashMapDao, ItemsMockedDao};
 use http::{
     auth_callback,
@@ -46,22 +47,19 @@ async fn main() {
     );
 
     let bind_address = format!("{}:{}", args.runtime.bind_host, args.runtime.bind_port);
-    let listener = match TcpListener::bind(&bind_address).await {
-        Err(err) => {
+    let listener = TcpListener::bind(&bind_address)
+        .await
+        .inspect_err(|err| {
             error!(
                 target : TRACING_STARTUP_TARGET,
                 "Cannot bind to {bind_address}: {err}"
             );
-            panic!()
-        }
-        Ok(listener) => {
-            info!(
-                target : TRACING_STARTUP_TARGET,
-                "Created listener at {bind_address}"
-            );
-            listener
-        }
-    };
+        })
+        .unwrap();
+    info!(
+        target : TRACING_STARTUP_TARGET,
+        "Created listener at {bind_address}"
+    );
 
     let oauth = BasicClient::new(ClientId::new(args.authentication.oauth_client_id))
         .set_client_secret(ClientSecret::new(args.authentication.oauth_client_secret))
@@ -70,25 +68,39 @@ async fn main() {
             TokenUrl::new("https://github.com/login/oauth/access_token".to_owned()).unwrap(),
         );
 
-    let session_store = MemoryStore::new();
-
-    let state = match args.runtime.dao_type {
-        DaoType::Mocked => {
-            info!(target : TRACING_STARTUP_TARGET, "Using MockedDao");
-            AppState {
-                items: Arc::new(ItemsMockedDao {}),
-                session_store,
-                oauth,
+    let state = AppState {
+        items: match args.runtime.dao_type {
+            DaoType::Mocked => {
+                info!(target : TRACING_STARTUP_TARGET, "Using ItemsMockedDao");
+                Arc::new(ItemsMockedDao {})
             }
-        }
-        DaoType::HashMap => {
-            info!(target : TRACING_STARTUP_TARGET, "Using HashMapDao");
-            AppState {
-                items: Arc::new(ItemsHashMapDao::new()),
-                session_store,
-                oauth,
+            DaoType::HashMap => {
+                info!(target : TRACING_STARTUP_TARGET, "Using ItemsHashMapDao");
+                Arc::new(ItemsHashMapDao::new())
             }
-        }
+        },
+        session_store: match args.session_store.session_store_type {
+            SessionStoreType::Memory => {
+                info!(target : TRACING_STARTUP_TARGET, "Using MemoryStore");
+                Arc::new(MemoryStore::new())
+            }
+            SessionStoreType::Redis => {
+                info!(target : TRACING_STARTUP_TARGET, "Using RedisSessionStore");
+                if args.session_store.session_store_dsn.is_empty() {
+                    error!(target: TRACING_STARTUP_TARGET, "Cannot instantiate RedisSessionStore with empty DSN");
+                    panic!()
+                }
+                let session_store = RedisSessionStore::new(
+                    args.session_store.session_store_dsn.clone(),
+                ).inspect_err(
+                    |err|
+                    error!(target: TRACING_STARTUP_TARGET, "Error while creating RedisSessionStore: {err:#?}")
+                ).unwrap();
+                info!(target : TRACING_STARTUP_TARGET, "Created RedisSessionStore with {:#?}", args.session_store.session_store_dsn);
+                Arc::new(session_store)
+            }
+        },
+        oauth,
     };
 
     let router = Router::new()
@@ -106,11 +118,13 @@ async fn main() {
     info!(target : TRACING_STARTUP_TARGET, "Created router");
 
     info!(target : TRACING_STARTUP_TARGET, "Starting server");
-    if let Err(err) = axum::serve(listener, router).await {
-        error!(
-            target : TRACING_STARTUP_TARGET,
-            "Failed to start server: {err}"
-        );
-        panic!()
-    }
+    axum::serve(listener, router)
+        .await
+        .inspect_err(|err| {
+            error!(
+                target : TRACING_STARTUP_TARGET,
+                "Failed to start server: {err}"
+            );
+        })
+        .unwrap();
 }

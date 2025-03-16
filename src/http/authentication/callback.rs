@@ -1,5 +1,6 @@
-use async_session::{Session, SessionStore};
+use async_session::Session;
 use axum::{
+    debug_handler,
     extract::{Query, State},
     http::{header::USER_AGENT, StatusCode},
     response::IntoResponse,
@@ -78,14 +79,12 @@ impl From<AuthCallbackError> for AppError {
     }
 }
 
-pub async fn auth_callback<T>(
+#[debug_handler]
+pub async fn auth_callback(
     cookie_jar: CookieJar,
-    State(state): State<AppState<T>>,
+    State(state): State<AppState>,
     Query(query): Query<AuthCallbackQuery>,
-) -> Result<impl IntoResponse, AppError>
-where
-    T: SessionStore,
-{
+) -> Result<impl IntoResponse, AppError> {
     // Get session ID cookie
     let cookie = cookie_jar
         .get(COOKIE_NAME)
