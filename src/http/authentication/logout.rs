@@ -1,5 +1,5 @@
-use async_session::SessionStore;
 use axum::{
+    debug_handler,
     extract::State,
     http::StatusCode,
     response::{IntoResponse, Redirect, Response},
@@ -42,13 +42,11 @@ impl From<LogoutError> for AppError {
     }
 }
 
-pub async fn logout<T>(
-    State(state): State<AppState<T>>,
+#[debug_handler]
+pub async fn logout(
+    State(state): State<AppState>,
     cookie_jar: CookieJar,
-) -> Result<impl IntoResponse, AppError>
-where
-    T: SessionStore,
-{
+) -> Result<impl IntoResponse, AppError> {
     let Some(cookie) = cookie_jar.get(COOKIE_NAME) else {
         // No cookie set, we don't know whom to logout
         return Ok(HomeRedirect);
