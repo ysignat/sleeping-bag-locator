@@ -13,6 +13,8 @@ pub struct Config {
     pub logging: Logging,
     #[command(flatten)]
     pub authentication: Authentication,
+    #[command(flatten)]
+    pub session_store: SessionStore,
 }
 
 #[derive(Args, Clone, Debug)]
@@ -54,4 +56,19 @@ pub struct Authentication {
     pub oauth_client_id: String,
     #[arg(long, env, default_value = "")]
     pub oauth_client_secret: String,
+}
+
+#[derive(Clone, ValueEnum, Default, Debug)]
+pub enum SessionStoreType {
+    Memory,
+    #[default]
+    Redis,
+}
+
+#[derive(Args, Clone, Debug)]
+pub struct SessionStore {
+    #[arg(long, env, default_value_t, value_enum)]
+    pub session_store_type: SessionStoreType,
+    #[arg(long, env, default_value = "")]
+    pub session_store_dsn: String,
 }
