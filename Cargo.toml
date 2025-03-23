@@ -31,13 +31,19 @@ tower-http = { version = "0.6.2", features = ["trace"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["json"] }
 thiserror = "2.0.12"
-reqwest = { version = "0.12.14", features = [
+reqwest = { version = "0.12.15", features = [
     "json",
     "rustls-tls",
 ], default-features = false }
 oauth2 = "5.0.0"
 async-session = "3.0.0"
 axum-extra = { version = "0.9.6", features = ["cookie"] }
+async-redis-session = "0.2.2"
 
 [dev-dependencies]
-fake = { version = "3.2.0", features = ["chrono", "derive", "dummy", "uuid"] }
+fake = { version = "4.2.0", features = ["chrono", "derive", "dummy", "uuid"] }
+
+[patch.crates-io]
+# async-session last tag (3.0.0) was created on Jun 1, 2021
+# Unfortunately, supertrait requirements were dropped after it, and dyn-dispatch requires this functionality
+async-session = { git = "https://github.com/http-rs/async-session.git", rev = "1c686d86dfc4fc2f1e05d8253583da1b22473f11" }

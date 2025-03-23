@@ -1,4 +1,5 @@
 use axum::{
+    debug_handler,
     extract::{Path, Query, State},
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
@@ -15,9 +16,10 @@ use crate::{
     },
 };
 
-pub async fn list_items<T>(
+#[debug_handler]
+pub async fn list_items(
     Query(pagination_params): Query<HttpPaginationParams>,
-    State(state): State<AppState<T>>,
+    State(state): State<AppState>,
 ) -> Result<impl IntoResponse, AppError> {
     let pagination: Pagination = pagination_params.try_into()?;
     let response_headers: HeaderMap = pagination.clone().try_into()?;
@@ -32,8 +34,9 @@ pub async fn list_items<T>(
     Ok((StatusCode::OK, response_headers, Json(result)))
 }
 
-pub async fn create_item<T>(
-    State(state): State<AppState<T>>,
+#[debug_handler]
+pub async fn create_item(
+    State(state): State<AppState>,
     Json(params): Json<HttpCreateItemParams>,
 ) -> Result<impl IntoResponse, AppError> {
     let result: HttpItem = state.items.create(params.try_into()?).await?.into();
@@ -41,18 +44,20 @@ pub async fn create_item<T>(
     Ok((StatusCode::CREATED, Json(result)))
 }
 
-pub async fn get_item<T>(
+#[debug_handler]
+pub async fn get_item(
     Path(id): Path<Uuid>,
-    State(state): State<AppState<T>>,
+    State(state): State<AppState>,
 ) -> Result<impl IntoResponse, AppError> {
     let result: HttpItem = state.items.get(id).await?.into();
 
     Ok((StatusCode::OK, Json(result)))
 }
 
-pub async fn update_item<T>(
+#[debug_handler]
+pub async fn update_item(
     Path(id): Path<Uuid>,
-    State(state): State<AppState<T>>,
+    State(state): State<AppState>,
     Json(params): Json<HttpUpdateItemParams>,
 ) -> Result<impl IntoResponse, AppError> {
     let result: HttpItem = state.items.update(id, params.try_into()?).await?.into();
@@ -60,16 +65,18 @@ pub async fn update_item<T>(
     Ok((StatusCode::OK, Json(result)))
 }
 
-pub async fn delete_item<T>(
+#[debug_handler]
+pub async fn delete_item(
     Path(id): Path<Uuid>,
-    State(state): State<AppState<T>>,
+    State(state): State<AppState>,
 ) -> Result<impl IntoResponse, AppError> {
     state.items.delete(id).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
 
-pub async fn health<T>(State(state): State<AppState<T>>) -> Result<impl IntoResponse, AppError> {
+#[debug_handler]
+pub async fn health(State(state): State<AppState>) -> Result<impl IntoResponse, AppError> {
     state.items.health().await?;
 
     Ok(StatusCode::OK)
