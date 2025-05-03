@@ -111,7 +111,7 @@ async fn main() {
         )
         .layer(TraceLayer::new_for_http())
         .route("/health", get(health))
-        .route("/auth", get(login))
+        .route("/login", get(login))
         .route("/auth/callback", get(auth_callback))
         .route("/logout", get(logout))
         .with_state(state);
