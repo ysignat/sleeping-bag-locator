@@ -16,13 +16,14 @@ use reqwest::Client;
 use super::{
     dtos::AuthCallbackQuery,
     errors::{AuthCallbackError, LoginError, LogoutError},
+    state::AppState,
     HomeRedirect,
     UserInfo,
     COOKIE_NAME,
     CSRF_TOKEN,
     USER_INFO,
 };
-use crate::http::{common::AppError, AppState};
+use crate::http::common::AppError;
 
 #[debug_handler]
 pub async fn auth_callback(
