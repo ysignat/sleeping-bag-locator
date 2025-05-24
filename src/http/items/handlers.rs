@@ -7,13 +7,13 @@ use axum::{
 };
 use uuid::Uuid;
 
-use super::dtos::{HttpCreateItemParams, HttpItem, HttpUpdateItemParams};
+use super::{
+    dtos::{HttpCreateItemParams, HttpItem, HttpUpdateItemParams},
+    state::AppState,
+};
 use crate::{
     dao::Pagination,
-    http::{
-        common::{AppError, HttpPaginationParams},
-        AppState,
-    },
+    http::common::{AppError, HttpPaginationParams},
 };
 
 #[debug_handler]
@@ -73,11 +73,4 @@ pub async fn delete_item(
     state.items.delete(id).await?;
 
     Ok(StatusCode::NO_CONTENT)
-}
-
-#[debug_handler]
-pub async fn health(State(state): State<AppState>) -> Result<impl IntoResponse, AppError> {
-    state.items.health().await?;
-
-    Ok(StatusCode::OK)
 }

@@ -88,6 +88,61 @@ components:
       items:
         $ref: "#/components/schemas/Item"
 
+    UserId:
+      type: string
+      format: uuid
+      example: 0d58e49b-11b0-4991-86d8-9418637e8cd1
+
+    UserName:
+      type: string
+      example: John Doe
+      maxLength: 128
+      minLength: 1
+
+    UserAuthType:
+      type: string
+      enum:
+        - github
+      example: github
+      maxLength: 128
+      minLength: 1
+
+    UserExternalId:
+      type: string
+      example: awesome-github-id
+      maxLength: 128
+      minLength: 1
+
+    User:
+      type: object
+      properties:
+        id:
+          $ref: "#/components/schemas/UserId"
+        name:
+          $ref: "#/components/schemas/UserName"
+        auth_type:
+          $ref: "#/components/schemas/UserAuthType"
+        created_at:
+          $ref: "#/components/schemas/Timestamp"
+        updated_at:
+          $ref: "#/components/schemas/Timestamp"
+
+    CreateUserBody:
+      type: object
+      properties:
+        name:
+          $ref: "#/components/schemas/UserName"
+        auth_type:
+          $ref: "#/components/schemas/UserAuthType"
+        external_id:
+          $ref: "#/components/schemas/UserExternalId"
+
+    UpdateUserBody:
+      type: object
+      properties:
+        name:
+          $ref: "#/components/schemas/UserName"
+
 paths:
   /items:
     get:
@@ -206,6 +261,100 @@ paths:
           required: true
           schema:
             $ref: "#/components/schemas/ItemId"
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not Found
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Error"
+  /users:
+    post:
+      requestBody:
+        content:
+          "application/json":
+            schema:
+              $ref: "#/components/schemas/CreateUserBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/User"
+        "422":
+          description: Unprocessable Entity
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Error"
+  /users/{user_id}:
+    get:
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/UserId"
+      responses:
+        "200":
+          description: OK
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: Not Found
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Error"
+    put:
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/UserId"
+      requestBody:
+        content:
+          "application/json":
+            schema:
+              $ref: "#/components/schemas/UpdateUserBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/User"
+        "422":
+          description: Unprocessable Entity
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not Found
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/UserId"
       responses:
         "204":
           description: Deleted

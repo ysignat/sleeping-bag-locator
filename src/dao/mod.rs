@@ -17,6 +17,21 @@ pub use items::{
     UpdateItemParamsBuilder,
     UpdateItemParamsBuilderError,
 };
+pub use users::{
+    CreateUserError,
+    CreateUserParams,
+    DeleteUserError,
+    GetUserError,
+    UpdateUserError,
+    UpdateUserParams,
+    User,
+    UserAuthType,
+    UsersDao,
+    UsersHashMapDao,
+    UsersHealthError,
+    UsersMockedDao,
+};
 
 mod common;
 mod items;
+mod users;

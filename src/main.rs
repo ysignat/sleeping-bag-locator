@@ -4,8 +4,8 @@ use async_redis_session::RedisSessionStore;
 use async_session::MemoryStore;
 use axum::{routing::get, Router};
 use clap::Parser;
-use config::{Config, DaoType, LogFormat, SessionStoreType};
-use dao::{ItemsHashMapDao, ItemsMockedDao};
+use config::{Config, ItemsDaoType, LogFormat, SessionStoreType, UsersDaoType};
+use dao::{ItemsHashMapDao, ItemsMockedDao, UsersHashMapDao, UsersMockedDao};
 use http::{
     auth_callback,
     create_item,
@@ -17,6 +17,7 @@ use http::{
     logout,
     update_item,
     AppState,
+    UserRouter,
 };
 use oauth2::{basic::BasicClient, AuthUrl, ClientId, ClientSecret, TokenUrl};
 use tokio::net::TcpListener;
@@ -69,14 +70,24 @@ async fn main() {
         );
 
     let state = AppState {
-        items: match args.runtime.dao_type {
-            DaoType::Mocked => {
+        items: match args.items.items_dao_type {
+            ItemsDaoType::Mocked => {
                 info!(target : TRACING_STARTUP_TARGET, "Using ItemsMockedDao");
                 Arc::new(ItemsMockedDao {})
             }
-            DaoType::HashMap => {
+            ItemsDaoType::HashMap => {
                 info!(target : TRACING_STARTUP_TARGET, "Using ItemsHashMapDao");
                 Arc::new(ItemsHashMapDao::new())
+            }
+        },
+        users: match args.users.users_dao_type {
+            UsersDaoType::Mocked => {
+                info!(target : TRACING_STARTUP_TARGET, "Using ItemsMockedDao");
+                Arc::new(UsersMockedDao {})
+            }
+            UsersDaoType::HashMap => {
+                info!(target : TRACING_STARTUP_TARGET, "Using ItemsHashMapDao");
+                Arc::new(UsersHashMapDao::new())
             }
         },
         session_store: match args.session_store.session_store_type {
@@ -103,17 +114,19 @@ async fn main() {
         oauth,
     };
 
+    let user_router = UserRouter::default();
     let router = Router::new()
+        .layer(TraceLayer::new_for_http())
         .route("/items", get(list_items).post(create_item))
         .route(
             "/items/:id",
             get(get_item).put(update_item).delete(delete_item),
         )
-        .layer(TraceLayer::new_for_http())
-        .route("/health", get(health))
+        .nest("/users", user_router.into())
         .route("/login", get(login))
         .route("/auth/callback", get(auth_callback))
         .route("/logout", get(logout))
+        .route("/health", get(health))
         .with_state(state);
     info!(target : TRACING_STARTUP_TARGET, "Created router");
 

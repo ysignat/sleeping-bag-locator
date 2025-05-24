@@ -10,6 +10,8 @@ use axum_extra::extract::CookieJar;
 pub use handlers::{auth_callback, login, logout};
 use serde::{Deserialize, Serialize};
 
+use super::state;
+
 mod dtos;
 mod errors;
 mod handlers;

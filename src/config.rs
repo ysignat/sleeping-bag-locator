@@ -15,6 +15,10 @@ pub struct Config {
     pub authentication: Authentication,
     #[command(flatten)]
     pub session_store: SessionStore,
+    #[command(flatten)]
+    pub items: ItemsDao,
+    #[command(flatten)]
+    pub users: UsersDao,
 }
 
 #[derive(Args, Clone, Debug)]
@@ -23,8 +27,6 @@ pub struct Runtime {
     pub bind_host: IpAddr,
     #[arg(long, env = "PORT", value_parser = value_parser!(u16).range(1..), default_value = "8080")]
     pub bind_port: u16,
-    #[arg(long, env, default_value_t, value_enum)]
-    pub dao_type: DaoType,
 }
 
 #[derive(Args, Clone, Debug)]
@@ -41,13 +43,6 @@ pub enum LogFormat {
     #[default]
     Default,
     Pretty,
-}
-
-#[derive(Clone, ValueEnum, Default, Debug)]
-pub enum DaoType {
-    Mocked,
-    #[default]
-    HashMap,
 }
 
 #[derive(Args, Clone, Debug)]
@@ -71,4 +66,30 @@ pub struct SessionStore {
     pub session_store_type: SessionStoreType,
     #[arg(long, env, default_value = "")]
     pub session_store_dsn: String,
+}
+
+#[derive(Clone, ValueEnum, Default, Debug)]
+pub enum ItemsDaoType {
+    Mocked,
+    #[default]
+    HashMap,
+}
+
+#[derive(Args, Clone, Debug)]
+pub struct ItemsDao {
+    #[arg(long, env, default_value_t, value_enum)]
+    pub items_dao_type: ItemsDaoType,
+}
+
+#[derive(Clone, ValueEnum, Default, Debug)]
+pub enum UsersDaoType {
+    Mocked,
+    #[default]
+    HashMap,
+}
+
+#[derive(Args, Clone, Debug)]
+pub struct UsersDao {
+    #[arg(long, env, default_value_t, value_enum)]
+    pub users_dao_type: UsersDaoType,
 }
