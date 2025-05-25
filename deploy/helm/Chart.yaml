@@ -3,7 +3,7 @@ name: sleeping-bag-locator
 description: A Helm chart for sleeping-bag-locator components deployment
 version: 0.1.0
 home: https://github.com/ysignat/sleeping-bag-locator
-kubeVersion: "1.32.0"
+kubeVersion: ~1.32.0
 type: application
 
 dependencies:
